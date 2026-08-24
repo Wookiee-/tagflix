@@ -84,8 +84,14 @@ app.whenReady().then(() => {
   const ua = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
   session.defaultSession.setUserAgent(ua);
 
-  // Apply stealth preload to ALL frames (including cross-origin iframes)
-  session.defaultSession.setPreloads([path.join(__dirname, 'preload.cjs')]);
+  // Clear corrupted disk cache on startup
+  session.defaultSession.clearCache().catch(() => {});
+
+  // Register preload script for all frames (including cross-origin iframes)
+  session.defaultSession.registerPreloadScript({
+    filePath: path.join(__dirname, 'preload.cjs'),
+    type: 'frame',
+  });
 
   createWindow();
 
