@@ -95,6 +95,56 @@ app.whenReady().then(() => {
 
   createWindow();
 
+  // ─── Built-in ad blocker ───
+  // Blocks requests to known ad/tracking domains before they load.
+  const AD_DOMAINS = [
+    // Generic ad networks
+    'doubleclick.net', 'googlesyndication.com', 'googleadservices.com',
+    'google-analytics.com', 'googletagmanager.com', 'googletagservices.com',
+    'adservice.google.com', 'pagead2.googlesyndication.com',
+    'tpc.googlesyndication.com', 'ad.lgappstv.com',
+    // Video player ads
+    'jwpltx.com', 'jwpsrv.com', 'brightcove.com', 'viralize.tv',
+    'moat.com', 'spotxchange.com', 'spotx.tv', 'serving-sys.com',
+    'adnxs.com', 'adsrvr.org', 'demdex.net', 'scorecardresearch.com',
+    // Pop-ups and pop-unders
+    'popads.net', 'popcash.net', 'propellerads.com', 'onclickmax.com',
+    'exoclick.com', 'juicyads.com', 'trafficjunky.com',
+    // Tracking / analytics
+    'facebook.net', 'fbcdn.net', 'connect.facebook.net',
+    'hotjar.com', 'sentry.io', 'amplitude.com',
+    'mixpanel.com', 'segment.com', 'branch.io',
+    'adjust.com', 'appsflyer.com', ' Branch.io',
+    // Cryptominers
+    'coinhive.com', 'coin-hive.com', 'crypto-loot.com',
+    'coinimp.com', 'authedmine.com',
+    // VidCore-specific ad domains
+    'je.deuxseethe.com', 'deuxseethe.com',
+    'ads.vidcore.io', 'ad.vidcore.io',
+    // Misc ad/redirect
+    'adfly', 'adf.ly', 'bit.ly', 'shorte.st',
+    'anonym.to', 'redirect.viglink.com',
+  ];
+
+  // Build URL filter patterns
+  const adUrlPatterns = AD_DOMAINS.map(d => `*://*.${d}/*`);
+  adUrlPatterns.push(
+    // Also block common ad path patterns
+    '*://*/ads/*', '*://*/advert/*', '*://*/advertisement/*',
+    '*://*/popunder/*', '*://*/popup/*',
+    '*://*/tracking/*', '*://*/analytics/*',
+  );
+
+  session.defaultSession.webRequest.onBeforeRequest(
+    { urls: adUrlPatterns },
+    (details, callback) => {
+      console.log('[adblock] blocked:', details.url.slice(0, 80));
+      callback({ cancel: true });
+    }
+  );
+
+  // ─── End ad blocker ───
+
   // Set proper headers for embed providers and hide Electron from detection
   session.defaultSession.webRequest.onBeforeSendHeaders(
     { urls: ['*://*.vidcore.io/*', '*://*.vidking.net/*'] },
