@@ -89,7 +89,7 @@ export function isFavourite(tmdbId: number, mediaType: string): boolean {
 
 // ─── Settings ───
 export function getAccentColor(): string {
-  return getItem<string>('accent', '#6366f1');
+  return getItem<string>('accent', '#3b82f6');
 }
 
 export function setAccentColor(color: string): void {

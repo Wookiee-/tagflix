@@ -48,7 +48,7 @@ const ACCENT_MAP: Record<string, { a: string; h: string }> = {
 
 function applyAccent(color: string) {
   setAccentColor(color);
-  const a = ACCENT_MAP[color] || ACCENT_MAP['#6366f1'];
+  const a = ACCENT_MAP[color] || ACCENT_MAP['#3b82f6'];
   const r = document.documentElement;
   r.style.setProperty('--accent', a.a);
   r.style.setProperty('--accent-hover', a.h);

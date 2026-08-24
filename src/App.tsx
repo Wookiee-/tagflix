@@ -70,9 +70,9 @@ export default function App(props: { children?: JSX.Element }) {
     // Apply saved theme
     try {
       const skin = localStorage.getItem('tagflix_skin') || 'dark';
-      const accent = localStorage.getItem('tagflix_accent') || '#6366f1';
+      const accent = localStorage.getItem('tagflix_accent') || '#3b82f6';
       const s = SKINS[skin] || SKINS.dark;
-      const a = ACCENTS[accent] || ACCENTS['#6366f1'];
+      const a = ACCENTS[accent] || ACCENTS['#3b82f6'];
       const r = document.documentElement;
       r.style.setProperty('--bg', s.bg);
       r.style.setProperty('--surface', s.surface);
