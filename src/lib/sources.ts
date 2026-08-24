@@ -15,9 +15,9 @@ export const SOURCES: StreamSource[] = [
   {
     id: 'vidcore',
     name: 'VidCore',
-    movieUrl: (tmdbId) => `https://vidcore.io/movie/${tmdbId}?autoPlay=true`,
+    movieUrl: (tmdbId) => `https://vidcore.io/embed/movie/${tmdbId}?autoPlay=true`,
     tvUrl: (tmdbId, season, episode) =>
-      `https://vidcore.io/tv/${tmdbId}/${season}/${episode}?autoPlay=true`,
+      `https://vidcore.io/embed/tv/${tmdbId}/${season}/${episode}?autoPlay=true`,
   },
   {
     id: 'vidking',

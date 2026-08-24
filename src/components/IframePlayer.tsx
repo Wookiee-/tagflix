@@ -52,8 +52,7 @@ export default function IframePlayer(props: Props) {
       <iframe
         src={props.url}
         class="player-iframe"
-        allow="autoplay; fullscreen; picture-in-picture; encrypted-media; playback-rate"
-        allowfullscreen
+        allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
         onLoad={() => setLoaded(true)}
         onError={() => setError(true)}
 
