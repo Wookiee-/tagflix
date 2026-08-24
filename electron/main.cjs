@@ -7,6 +7,7 @@ const isDev = !app.isPackaged;
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
 app.commandLine.appendSwitch('disable-site-isolation-trials');
 app.commandLine.appendSwitch('ignore-certificate-errors');
+app.commandLine.appendSwitch('disable-gpu-compositing');
 
 let mainWindow;
 

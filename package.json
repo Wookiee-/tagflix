@@ -10,8 +10,9 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "electron:dev": "vite & sleep 2 && electron .",
+    "electron:dev": "concurrently -k \"vite\" \"wait-on http://localhost:5173 && electron .\"",
     "electron:build": "vite build && electron-builder",
+    "electron:package": "vite build && electron-builder --win --mac --linux",
     "cap:init": "npx cap init tagflix com.tagflix.app --web-dir dist",
     "cap:add": "npx cap add android",
     "cap:sync": "npx cap sync",
@@ -49,10 +50,12 @@
   },
   "devDependencies": {
     "@types/node": "^24.13.3",
+    "concurrently": "^10.0.5",
     "electron": "^43.4.1",
     "electron-builder": "^26.15.3",
     "typescript": "~6.0.2",
     "vite": "^8.2.0",
-    "vite-plugin-solid": "^2.11.13"
+    "vite-plugin-solid": "^2.11.13",
+    "wait-on": "^8.0.3"
   }
 }
