@@ -68,8 +68,8 @@ function applySkin(skinId: string) {
 function SettingsCard(props: { icon: any; title: string; children: any }) {
   const Icon = props.icon;
   return (
-    <div class="rounded-2xl p-5 mb-4 glass animate-fade-in transition-all duration-200 hover:border-white/10">
-      <div class="flex items-center gap-3 mb-4">
+    <div class="rounded-2xl p-6 mb-6 glass animate-fade-in transition-all duration-200 hover:border-white/10">
+      <div class="flex items-center gap-3 mb-5">
         <div class="w-9 h-9 rounded-xl flex items-center justify-center transition-shadow duration-200"
           style={{
             background: 'var(--accent)',
@@ -111,21 +111,21 @@ export default function SettingsPage() {
   const [autoplay, setAutoplayState] = createSignal(getAutoplayNext());
 
   return (
-    <div class="p-4 md:p-8 max-w-2xl mx-auto animate-fade-in">
+    <div class="p-6 md:p-10 max-w-3xl mx-auto animate-fade-in">
       {/* Header */}
-      <div class="mb-8">
+      <div class="mb-10">
         <h1 class="text-2xl md:text-3xl font-black tracking-tight" style={{ color: 'white' }}>Settings</h1>
-        <p class="text-sm mt-1.5 opacity-50">Customize your experience</p>
+        <p class="text-sm mt-2 opacity-50">Customize your experience</p>
       </div>
 
       {/* Accent Color */}
       <SettingsCard icon={Palette} title="Accent Colour">
-        <p class="text-xs mb-4 opacity-40">Choose a colour that reflects your style</p>
-        <div class="flex gap-3 flex-wrap">
+        <p class="text-xs mb-5 opacity-40">Choose a colour that reflects your style</p>
+        <div class="flex gap-4 flex-wrap">
           <For each={ACCENTS}>
             {(a) => (
               <button
-                class="w-11 h-11 rounded-2xl transition-all duration-200 hover:scale-110 relative"
+                class="w-12 h-12 rounded-full transition-all duration-200 hover:scale-110 relative"
                 style={{
                   background: a.id,
                   'box-shadow': accent() === a.id
@@ -142,12 +142,12 @@ export default function SettingsPage() {
 
       {/* Skin */}
       <SettingsCard icon={Paintbrush} title="Skin">
-        <p class="text-xs mb-4 opacity-40">Pick a theme for the interface</p>
-        <div class="grid grid-cols-2 gap-3">
+        <p class="text-xs mb-5 opacity-40">Pick a theme for the interface</p>
+        <div class="grid grid-cols-2 gap-4">
           <For each={SKINS}>
             {(s) => (
               <button
-                class="p-4 rounded-2xl text-left transition-all duration-200 relative overflow-hidden group hover:scale-[1.02]"
+                class="p-5 rounded-2xl text-left transition-all duration-200 relative overflow-hidden group hover:scale-[1.02]"
                 style={{
                   background: skin() === s.id ? 'var(--accent)' : s.surface,
                   border: skin() === s.id ? 'none' : '1px solid rgba(255,255,255,0.06)',
@@ -155,10 +155,10 @@ export default function SettingsPage() {
                 }}
                 onClick={() => { setSkinState(s.id); applySkin(s.id); }}
               >
-                <div class="flex gap-1.5 mb-2">
-                  <div class="w-5 h-5 rounded-lg" style={{ background: s.bg }} />
-                  <div class="w-5 h-5 rounded-lg" style={{ background: s.surface }} />
-                  <div class="w-3 h-5 rounded-lg" style={{ background: skin() === s.id ? 'rgba(255,255,255,0.3)' : 'var(--accent)' }} />
+                <div class="flex gap-2 mb-3">
+                  <div class="w-6 h-6 rounded-lg" style={{ background: s.bg }} />
+                  <div class="w-6 h-6 rounded-lg" style={{ background: s.surface }} />
+                  <div class="w-4 h-6 rounded-lg" style={{ background: skin() === s.id ? 'rgba(255,255,255,0.3)' : 'var(--accent)' }} />
                 </div>
                 <span class="text-xs font-bold" style={{ color: skin() === s.id ? 'white' : 'var(--text)' }}>
                   {s.name}
@@ -171,12 +171,12 @@ export default function SettingsPage() {
 
       {/* Default Source */}
       <SettingsCard icon={Globe} title="Streaming Source">
-        <p class="text-xs mb-4 opacity-40">Choose which source to use first</p>
-        <div class="flex gap-2 flex-wrap">
+        <p class="text-xs mb-5 opacity-40">Choose which source to use first</p>
+        <div class="flex gap-3 flex-wrap">
           <For each={SOURCES}>
             {(s) => (
               <button
-                class="px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 hover:scale-[1.03]"
+                class="px-6 py-3 rounded-xl text-sm font-semibold transition-all duration-200 hover:scale-[1.03]"
                 style={{
                   background: source() === s.id ? 'var(--accent)' : 'rgba(255,255,255,0.06)',
                   color: source() === s.id ? 'white' : 'var(--text)',
@@ -197,7 +197,7 @@ export default function SettingsPage() {
         <div class="flex items-center justify-between">
           <div>
             <p class="text-sm font-semibold" style={{ color: 'white' }}>Autoplay next episode</p>
-            <p class="text-xs opacity-35 mt-0.5">Play the next episode automatically</p>
+            <p class="text-xs opacity-35 mt-1">Play the next episode automatically</p>
           </div>
           <Toggle
             checked={autoplay()}
@@ -211,10 +211,10 @@ export default function SettingsPage() {
         <div class="flex items-center justify-between">
           <div>
             <p class="text-sm font-semibold" style={{ color: 'white' }}>Clear Continue Watching</p>
-            <p class="text-xs opacity-35 mt-0.5">Remove all continue watching entries</p>
+            <p class="text-xs opacity-35 mt-1">Remove all continue watching entries</p>
           </div>
           <button
-            class="px-4 py-2 rounded-xl text-xs font-bold transition-all hover:brightness-110"
+            class="px-5 py-2.5 rounded-xl text-xs font-bold transition-all hover:brightness-110 shrink-0"
             style={{
               background: 'rgba(239, 68, 68, 0.15)',
               color: '#ef4444',
@@ -234,9 +234,9 @@ export default function SettingsPage() {
         <div class="flex items-center justify-between">
           <div>
             <p class="text-sm font-bold" style={{ color: 'white' }}>Tagflix v2.0</p>
-            <p class="text-xs opacity-35 mt-0.5">SolidJS + Electron + Capacitor</p>
+            <p class="text-xs opacity-35 mt-1">SolidJS + Electron + Capacitor</p>
           </div>
-          <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl glass">
+          <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl glass shrink-0">
             <Sparkles size={12} style={{ color: 'var(--accent)' }} />
             <span class="text-[10px] font-bold" style={{ color: 'var(--accent)' }}>OPEN SOURCE</span>
           </div>
