@@ -27,6 +27,7 @@ function createWindow() {
       webSecurity: false, // VidCore iframe needs cross-origin HLS fetches
       allowRunningInsecureContent: true,
       experimentalFeatures: true, // Enables underlying media/codec features
+      preload: path.join(__dirname, 'preload.cjs'),
     },
   });
 
@@ -45,6 +46,29 @@ function createWindow() {
     mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
   }
 
+  // Inject stealth into every frame after it loads (catches iframes)
+  mainWindow.webContents.on('did-finish-load', () => {
+    mainWindow.webContents.executeJavaScript(`
+      // Re-apply stealth patches in the main frame
+      Object.defineProperty(navigator, 'webdriver', { get: () => false });
+      if (!window.chrome) window.chrome = {};
+      if (!window.chrome.runtime) window.chrome.runtime = { connect: () => {}, sendMessage: () => {} };
+    `).catch(() => {});
+  });
+
+  // Also inject into every sub-frame (iframes)
+  mainWindow.webContents.on('did-attach-webview', () => {});
+  mainWindow.webContents.on('frame-navigated', (event, frame) => {
+    if (frame === mainWindow.webContents.mainFrame) return;
+    frame.once('dom-ready', () => {
+      frame.executeJavaScript(`
+        Object.defineProperty(navigator, 'webdriver', { get: () => false });
+        if (!window.chrome) window.chrome = {};
+        if (!window.chrome.runtime) window.chrome.runtime = { connect: () => {}, sendMessage: () => {} };
+      `).catch(() => {});
+    });
+  });
+
   // Show when ready
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
@@ -59,6 +83,9 @@ app.whenReady().then(() => {
   // Set user agent on the default session (applies to all requests including iframes)
   const ua = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
   session.defaultSession.setUserAgent(ua);
+
+  // Apply stealth preload to ALL frames (including cross-origin iframes)
+  session.defaultSession.setPreloads([path.join(__dirname, 'preload.cjs')]);
 
   createWindow();
 
