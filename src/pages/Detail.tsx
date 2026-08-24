@@ -1,7 +1,7 @@
 import { createSignal, createResource, Show, For, onMount } from 'solid-js';
 import { useNavigate, useParams } from '@solidjs/router';
 import {
-  ArrowLeft, Bookmark, BookmarkCheck, Play, Star, Clock, ChevronDown,
+  ArrowLeft, Bookmark, BookmarkCheck, Play, Star, Clock,
 } from 'lucide-solid';
 import {
   getMovieDetail, getTvDetail, getSeasonEpisodes,
@@ -173,12 +173,10 @@ export default function DetailPage() {
 
                   {/* Info */}
                   <div class="flex-1 pt-20 md:pt-24">
-                    {/* Title */}
                     <h1 class="text-2xl md:text-5xl font-black mb-3 leading-tight tracking-tight" style={{ color: 'white' }}>
                       {mediaTitle(data)}
                     </h1>
 
-                    {/* Meta row */}
                     <div class="flex items-center gap-3 mb-4 text-sm flex-wrap">
                       <Show when={data.vote_average > 0}>
                         <span class="flex items-center gap-1 font-bold text-yellow-400">
@@ -202,7 +200,6 @@ export default function DetailPage() {
                       </Show>
                     </div>
 
-                    {/* Genres */}
                     <Show when={data.genres?.length}>
                       <div class="flex gap-2 mb-4 flex-wrap">
                         <For each={data.genres}>
@@ -218,12 +215,10 @@ export default function DetailPage() {
                       </div>
                     </Show>
 
-                    {/* Overview */}
                     <p class="text-sm leading-relaxed text-white/70 max-w-2xl mb-6">
                       {data.overview || 'No description available.'}
                     </p>
 
-                    {/* Action buttons */}
                     <div class="flex gap-3 flex-wrap mb-8">
                       <button
                         class="px-8 py-3 rounded-xl font-bold text-sm text-white flex items-center gap-2 transition-all hover:brightness-110 hover:scale-[1.02] active:scale-[0.98]"
@@ -274,27 +269,57 @@ export default function DetailPage() {
                 {/* ═══ TV Seasons & Episodes ═══ */}
                 <Show when={isTv()}>
                   <div class="mt-2">
-                    {/* Season selector */}
+                    {/* Season selector with thumbnails */}
                     <Show when={tvData().seasons?.length}>
-                      <div class="flex items-center gap-2 mb-5">
-                        <h3 class="text-xs font-bold uppercase tracking-widest text-white/40 mr-2">Seasons</h3>
-                        <div class="flex gap-2 overflow-x-auto pb-1">
-                          <For each={tvData().seasons.filter(s => s.season_number > 0)}>
-                            {(season) => (
+                      <h3 class="text-xs font-bold mb-3 uppercase tracking-widest text-white/40">Seasons</h3>
+                      <div class="flex gap-3 overflow-x-auto pb-3 mb-5">
+                        <For each={tvData().seasons.filter(s => s.season_number > 0)}>
+                          {(season) => {
+                            const isActive = () => activeSeason() === season.season_number;
+                            return (
                               <button
-                                class="px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-all shrink-0"
-                                style={{
-                                  background: activeSeason() === season.season_number ? 'var(--accent)' : 'rgba(255,255,255,0.08)',
-                                  color: activeSeason() === season.season_number ? 'white' : 'var(--text)',
-                                  border: activeSeason() === season.season_number ? 'none' : '1px solid rgba(255,255,255,0.1)',
-                                }}
+                                class="shrink-0 w-[100px] md:w-[120px] text-left transition-all group"
                                 onClick={() => setActiveSeason(season.season_number)}
                               >
-                                S{season.season_number}
+                                {/* Season poster thumbnail */}
+                                <div
+                                  class="w-full aspect-[2/3] rounded-xl overflow-hidden mb-1.5 relative ring-2 transition-all"
+                                  style={{
+                                    'ring-color': isActive() ? 'var(--accent)' : 'transparent',
+                                    opacity: isActive() ? 1 : 0.6,
+                                  }}
+                                >
+                                  <Show when={season.poster_path} fallback={
+                                    <div class="w-full h-full flex items-center justify-center text-xs font-bold"
+                                      style={{ background: 'var(--surface)', color: 'var(--text)' }}>
+                                      S{season.season_number}
+                                    </div>
+                                  }>
+                                    <img
+                                      src={imageUrl(season.poster_path, 'w185')}
+                                      alt={`Season ${season.season_number}`}
+                                      class="w-full h-full object-cover"
+                                      loading="lazy"
+                                    />
+                                  </Show>
+                                  {/* Active overlay */}
+                                  <Show when={isActive()}>
+                                    <div class="absolute inset-0 ring-2 ring-inset rounded-xl" style={{ 'ring-color': 'var(--accent)' }} />
+                                  </Show>
+                                </div>
+                                <p
+                                  class="text-xs font-bold truncate"
+                                  style={{ color: isActive() ? 'var(--accent)' : 'white' }}
+                                >
+                                  {season.name || `Season ${season.season_number}`}
+                                </p>
+                                <p class="text-[10px] opacity-40">
+                                  {season.episode_count} ep{season.episode_count !== 1 ? 's' : ''}
+                                </p>
                               </button>
-                            )}
-                          </For>
-                        </div>
+                            );
+                          }}
+                        </For>
                       </div>
                     </Show>
 
@@ -307,26 +332,22 @@ export default function DetailPage() {
                             style={{ background: 'rgba(255,255,255,0.03)' }}
                             onClick={() => playEpisode(ep)}
                           >
-                            {/* Episode thumbnail */}
                             <div class="shrink-0 w-[140px] aspect-video rounded-lg overflow-hidden bg-black/30 relative">
                               <Show when={ep.still_path} fallback={
                                 <div class="w-full h-full flex items-center justify-center text-white/20 text-xs">No image</div>
                               }>
                                 <img src={imageUrl(ep.still_path, 'w300')} alt="" class="w-full h-full object-cover" />
                               </Show>
-                              {/* Play overlay */}
                               <div class="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/40 transition-colors">
                                 <div class="w-10 h-10 rounded-full bg-white/90 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                                   <Play size={16} fill="black" class="ml-0.5" style={{ color: 'black' }} />
                                 </div>
                               </div>
-                              {/* Duration badge */}
                               <div class="absolute bottom-1 right-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-black/70 text-white">
                                 {ep.episode_number}
                               </div>
                             </div>
 
-                            {/* Episode info */}
                             <div class="flex-1 min-w-0 py-0.5">
                               <p class="text-sm font-bold truncate" style={{ color: 'white' }}>
                                 {ep.episode_number}. {ep.name}
@@ -339,7 +360,6 @@ export default function DetailPage() {
                               </Show>
                             </div>
 
-                            {/* Episode rating */}
                             <Show when={ep.vote_average > 0}>
                               <div class="shrink-0 flex items-start pt-1">
                                 <span class="text-xs font-bold text-yellow-400 flex items-center gap-0.5">

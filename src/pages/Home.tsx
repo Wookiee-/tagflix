@@ -12,7 +12,6 @@ function HeroBanner(props: { item: TMDBMedia }) {
 
   return (
     <div class="relative w-full h-[55vh] min-h-[380px] max-h-[560px] overflow-hidden mb-8">
-      {/* Backdrop */}
       <Show when={props.item.backdrop_path} fallback={
         <div class="absolute inset-0" style={{ background: 'var(--surface)' }} />
       }>
@@ -23,7 +22,6 @@ function HeroBanner(props: { item: TMDBMedia }) {
         />
       </Show>
 
-      {/* Gradients */}
       <div class="absolute inset-0" style={{
         background: 'linear-gradient(to top, var(--bg) 2%, rgba(0,0,0,0.5) 40%, transparent 100%)',
       }} />
@@ -31,9 +29,7 @@ function HeroBanner(props: { item: TMDBMedia }) {
         background: 'linear-gradient(to right, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.2) 50%, transparent 100%)',
       }} />
 
-      {/* Content */}
       <div class="absolute bottom-0 left-0 p-6 md:p-10 max-w-2xl z-10">
-        {/* Badge */}
         <div class="flex items-center gap-2 mb-3">
           <span class="text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md"
             style={{ background: 'var(--accent)', color: 'white' }}>
@@ -47,17 +43,14 @@ function HeroBanner(props: { item: TMDBMedia }) {
           <span class="text-xs text-white/50">{mediaYear(props.item)}</span>
         </div>
 
-        {/* Title */}
         <h1 class="text-3xl md:text-5xl font-black mb-3 leading-[1.1] tracking-tight" style={{ color: 'white' }}>
           {mediaTitle(props.item)}
         </h1>
 
-        {/* Overview */}
         <p class="text-sm text-white/60 line-clamp-3 mb-5 max-w-lg leading-relaxed">
           {props.item.overview}
         </p>
 
-        {/* CTA */}
         <button
           class="px-7 py-3 rounded-xl font-bold text-sm text-white flex items-center gap-2 transition-all hover:brightness-110 hover:scale-[1.02] active:scale-[0.98]"
           style={{ background: 'var(--accent)' }}
@@ -100,11 +93,11 @@ function PosterCard(props: { item: TMDBMedia }) {
       class="shrink-0 w-[130px] md:w-[170px] group cursor-pointer"
       onClick={() => navigate(`/${type()}/${props.item.id}`)}
     >
-      {/* Poster */}
       <div class="relative w-full aspect-[2/3] rounded-xl overflow-hidden mb-2 ring-1 ring-white/[0.06]">
         <Show when={props.item.poster_path} fallback={
-          <div class="w-full h-full flex items-center justify-center text-xs" style={{ background: 'var(--surface)', color: 'var(--text)' }}>
-            No poster
+          <div class="w-full h-full flex items-center justify-center px-2 text-center text-xs font-bold leading-tight"
+            style={{ background: 'var(--surface)', color: 'var(--text)' }}>
+            {mediaTitle(props.item)}
           </div>
         }>
           <img
@@ -115,7 +108,6 @@ function PosterCard(props: { item: TMDBMedia }) {
           />
         </Show>
 
-        {/* Hover overlay */}
         <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col justify-end p-3">
           <div class="flex items-center gap-1">
             <Play size={14} fill="white" style={{ color: 'white' }} />
@@ -123,7 +115,6 @@ function PosterCard(props: { item: TMDBMedia }) {
           </div>
         </div>
 
-        {/* Rating badge */}
         <Show when={props.item.vote_average > 0}>
           <div class="absolute top-2 right-2 px-1.5 py-0.5 rounded-md bg-black/70 backdrop-blur-sm flex items-center gap-0.5">
             <Star size={9} fill="#facc15" style={{ color: '#facc15' }} />
@@ -132,11 +123,54 @@ function PosterCard(props: { item: TMDBMedia }) {
         </Show>
       </div>
 
-      {/* Title */}
       <p class="text-xs font-semibold truncate" style={{ color: 'var(--text)' }}>
         {mediaTitle(props.item)}
       </p>
       <p class="text-[10px] opacity-40">{mediaYear(props.item)}</p>
+    </button>
+  );
+}
+
+/* ═══ Continue Watching Card ═══ */
+function ContinueCard(props: { item: { tmdbId: number; mediaType: string; title: string; poster: string; progress: number } }) {
+  const navigate = useNavigate();
+
+  return (
+    <button
+      class="shrink-0 w-[130px] md:w-[170px] group cursor-pointer"
+      onClick={() => navigate(`/${props.item.mediaType}/${props.item.tmdbId}`)}
+    >
+      <div class="relative w-full aspect-[2/3] rounded-xl overflow-hidden mb-2 ring-1 ring-white/[0.06]">
+        <Show when={props.item.poster} fallback={
+          <div class="w-full h-full flex items-center justify-center px-2 text-center text-xs font-bold leading-tight"
+            style={{ background: 'var(--surface)', color: 'var(--text)' }}>
+            {props.item.title}
+          </div>
+        }>
+          <img
+            src={imageUrl(props.item.poster, 'w342')}
+            alt={props.item.title}
+            class="w-full h-full object-cover"
+            loading="lazy"
+          />
+        </Show>
+
+        {/* Progress bar */}
+        <Show when={props.item.progress > 0}>
+          <div class="absolute bottom-0 left-0 right-0 h-1 bg-black/50">
+            <div class="h-full rounded-r" style={{ width: `${Math.min(props.item.progress, 100)}%`, background: 'var(--accent)' }} />
+          </div>
+        </Show>
+
+        {/* Hover overlay */}
+        <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+          <div class="w-12 h-12 rounded-full bg-white/90 flex items-center justify-center">
+            <Play size={20} fill="black" class="ml-0.5" style={{ color: 'black' }} />
+          </div>
+        </div>
+      </div>
+
+      <p class="text-xs font-semibold truncate">{props.item.title}</p>
     </button>
   );
 }
@@ -207,28 +241,7 @@ export default function HomePage() {
           <SectionHeader title="Continue Watching" />
           <div class="flex gap-3 px-4 md:px-10 overflow-x-auto pb-2">
             <For each={continueWatching()}>
-              {(cw) => (
-                <button
-                  class="shrink-0 w-[130px] md:w-[170px] group cursor-pointer"
-                  onClick={() => navigate(`/${cw.mediaType}/${cw.tmdbId}`)}
-                >
-                  <div class="relative w-full aspect-[2/3] rounded-xl overflow-hidden mb-2 ring-1 ring-white/[0.06]">
-                    <Show when={cw.poster} fallback={
-                      <div class="w-full h-full" style={{ background: 'var(--surface)' }} />
-                    }>
-                      <img src={imageUrl(cw.poster, 'w342')} alt="" class="w-full h-full object-cover" loading="lazy" />
-                    </Show>
-                    {/* Progress bar */}
-                    <div class="absolute bottom-0 left-0 right-0 h-1 bg-black/50">
-                      <div class="h-full rounded-r" style={{ width: `${cw.progress}%`, background: 'var(--accent)' }} />
-                    </div>
-                    <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                      <Play size={24} fill="white" style={{ color: 'white' }} />
-                    </div>
-                  </div>
-                  <p class="text-xs font-semibold truncate">{cw.title}</p>
-                </button>
-              )}
+              {(cw) => <ContinueCard item={cw} />}
             </For>
           </div>
         </div>
