@@ -2,8 +2,8 @@ import { createSignal, onMount, Show, For } from 'solid-js';
 import { useNavigate } from '@solidjs/router';
 import type { TMDBMedia } from '../lib/tmdb';
 import { getTrending, getPopularMovies, getPopularTV, imageUrl, backdropUrl, mediaTitle, mediaYear, mediaType } from '../lib/tmdb';
-import { getContinueWatching } from '../lib/storage';
-import { Play, Star, ChevronRight } from 'lucide-solid';
+import { getContinueWatching, removeContinueWatching, clearAllContinueWatching, type ContinueWatching } from '../lib/storage';
+import { Play, Star, ChevronRight, X } from 'lucide-solid';
 
 /* ═══ Hero Banner ═══ */
 function HeroBanner(props: { item: TMDBMedia }) {
@@ -22,7 +22,6 @@ function HeroBanner(props: { item: TMDBMedia }) {
         />
       </Show>
 
-      {/* Layered gradients for depth */}
       <div class="absolute inset-0" style={{
         background: 'linear-gradient(to top, var(--bg) 0%, rgba(0,0,0,0.3) 35%, transparent 70%)',
       }} />
@@ -79,21 +78,32 @@ function HeroBanner(props: { item: TMDBMedia }) {
 }
 
 /* ═══ Section Header ═══ */
-function SectionHeader(props: { title: string; onSeeAll?: () => void }) {
+function SectionHeader(props: { title: string; onSeeAll?: () => void; onClear?: () => void }) {
   return (
     <div class="flex items-center justify-between px-4 md:px-10 mb-4">
       <h2 class="text-base md:text-lg font-bold tracking-tight" style={{ color: 'white' }}>
         {props.title}
       </h2>
-      <Show when={props.onSeeAll}>
-        <button
-          class="flex items-center gap-1 text-xs font-semibold transition-all hover:gap-2"
-          style={{ color: 'var(--accent)' }}
-          onClick={props.onSeeAll}
-        >
-          See All <ChevronRight size={14} />
-        </button>
-      </Show>
+      <div class="flex items-center gap-3">
+        <Show when={props.onClear}>
+          <button
+            class="text-xs font-semibold opacity-40 hover:opacity-80 transition-opacity"
+            style={{ color: 'var(--text)' }}
+            onClick={props.onClear}
+          >
+            Clear All
+          </button>
+        </Show>
+        <Show when={props.onSeeAll}>
+          <button
+            class="flex items-center gap-1 text-xs font-semibold transition-all hover:gap-2"
+            style={{ color: 'var(--accent)' }}
+            onClick={props.onSeeAll}
+          >
+            See All <ChevronRight size={14} />
+          </button>
+        </Show>
+      </div>
     </div>
   );
 }
@@ -102,7 +112,6 @@ function SectionHeader(props: { title: string; onSeeAll?: () => void }) {
 function PosterCard(props: { item: TMDBMedia; delay?: number }) {
   const navigate = useNavigate();
   const type = () => mediaType(props.item);
-  const imgSize = () => 'w185';
 
   return (
     <button
@@ -119,14 +128,13 @@ function PosterCard(props: { item: TMDBMedia; delay?: number }) {
           </div>
         }>
           <img
-            src={imageUrl(props.item.poster_path, imgSize())}
+            src={imageUrl(props.item.poster_path, 'w185')}
             alt={mediaTitle(props.item)}
             class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
             loading="lazy"
           />
         </Show>
 
-        {/* Gradient overlay on hover */}
         <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col justify-end p-3">
           <div class="flex items-center gap-1.5 mb-1">
             <div class="w-7 h-7 rounded-full bg-white/90 flex items-center justify-center">
@@ -136,7 +144,6 @@ function PosterCard(props: { item: TMDBMedia; delay?: number }) {
           </div>
         </div>
 
-        {/* Rating badge */}
         <Show when={props.item.vote_average > 0}>
           <div class="absolute top-2 right-2 px-1.5 py-0.5 rounded-lg glass-strong flex items-center gap-0.5">
             <Star size={9} fill="#facc15" style={{ color: '#facc15' }} />
@@ -153,59 +160,69 @@ function PosterCard(props: { item: TMDBMedia; delay?: number }) {
   );
 }
 
-/* ═══ Continue Watching Card ═══ */
-function ContinueCard(props: { item: { tmdbId: number; mediaType: string; title: string; poster: string; progress: number } }) {
+/* ═══ Continue Watching Card (with delete) ═══ */
+function ContinueCard(props: {
+  item: ContinueWatching;
+  onDelete: (key: string) => void;
+}) {
   const navigate = useNavigate();
 
   return (
-    <button
-      class="shrink-0 w-[130px] md:w-[170px] group cursor-pointer animate-fade-in"
-      onClick={() => navigate(`/${props.item.mediaType}/${props.item.tmdbId}`)}
-    >
-      <div class="relative w-full aspect-[2/3] rounded-2xl overflow-hidden mb-2 ring-1 ring-white/[0.06] transition-all duration-300 group-hover:ring-white/20"
-        style={{ 'box-shadow': '0 4px 20px rgba(0,0,0,0.3)' }}>
-        <Show when={props.item.poster} fallback={
-          <div class="w-full h-full flex items-center justify-center px-2 text-center text-xs font-bold leading-tight"
-            style={{ background: 'var(--surface)', color: 'var(--text)' }}>
-            {props.item.title}
-          </div>
-        }>
-          <img
-            src={imageUrl(props.item.poster, 'w185')}
-            alt={props.item.title}
-            class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-            loading="lazy"
-          />
-        </Show>
+    <div class="shrink-0 w-[130px] md:w-[170px] group relative animate-fade-in">
+      {/* Delete button */}
+      <button
+        class="absolute -top-1 -right-1 z-20 w-6 h-6 rounded-full flex items-center justify-center bg-black/70 text-white/60 hover:text-white hover:bg-red-500/80 transition-all duration-200 opacity-0 group-hover:opacity-100"
+        onClick={(e) => { e.stopPropagation(); props.onDelete(props.item.key); }}
+      >
+        <X size={12} />
+      </button>
 
-        {/* Accent glow bottom */}
-        <div class="absolute inset-0" style={{
-          background: 'linear-gradient(to top, var(--accent-glow) 0%, transparent 30%)',
-          opacity: 0.4,
-        }} />
+      <button
+        class="w-full cursor-pointer"
+        onClick={() => navigate(`/${props.item.mediaType}/${props.item.tmdbId}`)}
+      >
+        <div class="relative w-full aspect-[2/3] rounded-2xl overflow-hidden mb-2 ring-1 ring-white/[0.06] transition-all duration-300 group-hover:ring-white/20"
+          style={{ 'box-shadow': '0 4px 20px rgba(0,0,0,0.3)' }}>
+          <Show when={props.item.poster} fallback={
+            <div class="w-full h-full flex items-center justify-center px-2 text-center text-xs font-bold leading-tight"
+              style={{ background: 'var(--surface)', color: 'var(--text)' }}>
+              {props.item.title}
+            </div>
+          }>
+            <img
+              src={imageUrl(props.item.poster, 'w185')}
+              alt={props.item.title}
+              class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+              loading="lazy"
+            />
+          </Show>
 
-        {/* Progress bar */}
-        <Show when={props.item.progress > 0}>
-          <div class="absolute bottom-0 left-0 right-0 h-[3px] bg-white/10">
-            <div class="h-full rounded-r-full transition-all duration-300" style={{
-              width: `${Math.min(props.item.progress, 100)}%`,
-              background: 'var(--accent)',
-              'box-shadow': '0 0 8px var(--accent-glow)',
-            }} />
-          </div>
-        </Show>
+          <div class="absolute inset-0" style={{
+            background: 'linear-gradient(to top, var(--accent-glow) 0%, transparent 30%)',
+            opacity: 0.4,
+          }} />
 
-        {/* Hover overlay */}
-        <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300">
-          <div class="w-12 h-12 rounded-full bg-white/90 flex items-center justify-center scale-75 group-hover:scale-100 transition-transform duration-300"
-            style={{ 'box-shadow': '0 4px 20px rgba(0,0,0,0.4)' }}>
-            <Play size={18} fill="black" class="ml-0.5" style={{ color: 'black' }} />
+          <Show when={props.item.progress > 0}>
+            <div class="absolute bottom-0 left-0 right-0 h-[3px] bg-white/10">
+              <div class="h-full rounded-r-full transition-all duration-300" style={{
+                width: `${Math.min(props.item.progress, 100)}%`,
+                background: 'var(--accent)',
+                'box-shadow': '0 0 8px var(--accent-glow)',
+              }} />
+            </div>
+          </Show>
+
+          <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300">
+            <div class="w-12 h-12 rounded-full bg-white/90 flex items-center justify-center scale-75 group-hover:scale-100 transition-transform duration-300"
+              style={{ 'box-shadow': '0 4px 20px rgba(0,0,0,0.4)' }}>
+              <Play size={18} fill="black" class="ml-0.5" style={{ color: 'black' }} />
+            </div>
           </div>
         </div>
-      </div>
 
-      <p class="text-xs font-semibold truncate transition-colors group-hover:text-white">{props.item.title}</p>
-    </button>
+        <p class="text-xs font-semibold truncate transition-colors group-hover:text-white">{props.item.title}</p>
+      </button>
+    </div>
   );
 }
 
@@ -243,7 +260,7 @@ export default function HomePage() {
   const [popularMovies, setPopularMovies] = createSignal<TMDBMedia[]>([]);
   const [popularTV, setPopularTV] = createSignal<TMDBMedia[]>([]);
   const [loading, setLoading] = createSignal(true);
-  const [continueWatching] = createSignal(getContinueWatching());
+  const [cwItems, setCwItems] = createSignal(getContinueWatching());
 
   onMount(async () => {
     try {
@@ -262,18 +279,28 @@ export default function HomePage() {
     }
   });
 
+  const deleteEntry = (key: string) => {
+    removeContinueWatching(key);
+    setCwItems(getContinueWatching());
+  };
+
+  const clearAll = () => {
+    clearAllContinueWatching();
+    setCwItems([]);
+  };
+
   return (
     <div class="pb-8">
       <Show when={trending().length > 0}>
         <HeroBanner item={trending()[0]} />
       </Show>
 
-      <Show when={continueWatching().length > 0}>
+      <Show when={cwItems().length > 0}>
         <div class="mb-8">
-          <SectionHeader title="Continue Watching" />
+          <SectionHeader title="Continue Watching" onClear={clearAll} />
           <div class="flex gap-3 px-4 md:px-10 overflow-x-auto pb-2">
-            <For each={continueWatching()}>
-              {(cw) => <ContinueCard item={cw} />}
+            <For each={cwItems()}>
+              {(cw) => <ContinueCard item={cw} onDelete={deleteEntry} />}
             </For>
           </div>
         </div>

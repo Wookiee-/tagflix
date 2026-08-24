@@ -6,6 +6,7 @@ import {
   getAccentColor, setAccentColor, getSkin, setSkin,
   getActiveSource, setActiveSource,
   getAutoplayNext, setAutoplayNext,
+  clearAllContinueWatching,
 } from '../lib/storage';
 import { SOURCES } from '../lib/sources';
 
@@ -205,8 +206,31 @@ export default function SettingsPage() {
         </div>
       </SettingsCard>
 
+      {/* Clear Data */}
+      <SettingsCard icon={Info} title="Data">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm font-semibold" style={{ color: 'white' }}>Clear Continue Watching</p>
+            <p class="text-xs opacity-35 mt-0.5">Remove all continue watching entries</p>
+          </div>
+          <button
+            class="px-4 py-2 rounded-xl text-xs font-bold transition-all hover:brightness-110"
+            style={{
+              background: 'rgba(239, 68, 68, 0.15)',
+              color: '#ef4444',
+              border: '1px solid rgba(239, 68, 68, 0.2)',
+            }}
+            onClick={() => {
+              clearAllContinueWatching();
+            }}
+          >
+            Clear
+          </button>
+        </div>
+      </SettingsCard>
+
       {/* About */}
-      <SettingsCard icon={Info} title="About">
+      <SettingsCard icon={Sparkles} title="About">
         <div class="flex items-center justify-between">
           <div>
             <p class="text-sm font-bold" style={{ color: 'white' }}>Tagflix v2.0</p>

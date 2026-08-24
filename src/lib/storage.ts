@@ -52,6 +52,10 @@ export function removeContinueWatching(key: string): void {
   setItem('continue_watching', list);
 }
 
+export function clearAllContinueWatching(): void {
+  setItem('continue_watching', []);
+}
+
 // ─── Favourites ───
 export interface Favourite {
   tmdbId: number;

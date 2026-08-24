@@ -6,6 +6,10 @@ export default defineConfig({
   plugins: [solid(), tailwindcss()],
   server: {
     port: 5173,
+    strictPort: false,
+    hmr: {
+      overlay: false,
+    },
   },
   build: {
     target: 'es2023',
