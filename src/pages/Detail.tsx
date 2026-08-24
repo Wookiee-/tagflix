@@ -29,15 +29,19 @@ export default function DetailPage() {
   const [activeSeason, setActiveSeason] = createSignal(1);
   const [episodes, setEpisodes] = createSignal<TMDBEpisode[]>([]);
 
-  createResource(activeSeason, async (season) => {
-    if (!isTv()) return;
-    try {
-      const eps = await getSeasonEpisodes(tmdbId(), season);
-      setEpisodes(eps);
-    } catch (e) {
-      console.error('[Detail] Failed to load episodes:', e);
+  // Re-fetch episodes when season OR show changes
+  createResource(
+    () => ({ id: tmdbId(), season: activeSeason() }),
+    async ({ id, season }) => {
+      if (!isTv()) return;
+      try {
+        const eps = await getSeasonEpisodes(id, season);
+        setEpisodes(eps);
+      } catch (e) {
+        console.error('[Detail] Failed to load episodes:', e);
+      }
     }
-  });
+  );
 
   // Source
   const [activeSource, setActiveSrc] = createSignal(getActiveSource());
