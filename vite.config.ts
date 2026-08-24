@@ -11,6 +11,7 @@ export default defineConfig({
       overlay: false,
     },
   },
+  base: './',
   build: {
     target: 'es2023',
   },
