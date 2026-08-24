@@ -29,7 +29,7 @@ function randomKey(): string {
   return TMDB_KEYS[Math.floor(Math.random() * TMDB_KEYS.length)];
 }
 
-export function imageUrl(path: string | null, size: string = 'w500'): string {
+export function imageUrl(path: string | null, size: string = 'w185'): string {
   if (!path) return '';
   return `${IMG}/${size}${path}`;
 }

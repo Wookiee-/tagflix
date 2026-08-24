@@ -137,7 +137,7 @@ export default function DetailPage() {
                   <div class="absolute inset-0" style={{ background: 'var(--surface)' }} />
                 }>
                   <img
-                    src={backdropUrl(data.backdrop_path, 'original')}
+                    src={backdropUrl(data.backdrop_path, 'w1280')}
                     alt=""
                     class="absolute inset-0 w-full h-full object-cover"
                   />
