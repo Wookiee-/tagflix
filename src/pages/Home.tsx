@@ -171,10 +171,10 @@ function ContinueCard(props: {
     <div class="shrink-0 w-[130px] md:w-[170px] group relative animate-fade-in">
       {/* Delete button */}
       <button
-        class="absolute -top-1 -right-1 z-20 w-6 h-6 rounded-full flex items-center justify-center bg-black/70 text-white/60 hover:text-white hover:bg-red-500/80 transition-all duration-200 opacity-0 group-hover:opacity-100"
+        class="absolute -top-2 -right-2 z-20 w-8 h-8 rounded-full flex items-center justify-center bg-black/80 text-white/70 hover:text-white hover:bg-red-500 transition-all duration-200 opacity-0 group-hover:opacity-100 shadow-lg"
         onClick={(e) => { e.stopPropagation(); props.onDelete(props.item.key); }}
       >
-        <X size={12} />
+        <X size={16} />
       </button>
 
       <button

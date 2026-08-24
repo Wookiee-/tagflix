@@ -64,46 +64,6 @@ function applySkin(skinId: string) {
   r.style.setProperty('--text', s.text);
 }
 
-/* ═══ Glass Settings Card ═══ */
-function SettingsCard(props: { icon: any; title: string; children: any }) {
-  const Icon = props.icon;
-  return (
-    <div class="rounded-2xl p-6 mb-6 glass animate-fade-in transition-all duration-200 hover:border-white/10">
-      <div class="flex items-center gap-3 mb-5">
-        <div class="w-9 h-9 rounded-xl flex items-center justify-center transition-shadow duration-200"
-          style={{
-            background: 'var(--accent)',
-            'box-shadow': '0 2px 12px var(--accent-glow)',
-          }}>
-          <Icon size={17} style={{ color: 'white' }} />
-        </div>
-        <h2 class="text-sm font-bold tracking-tight" style={{ color: 'white' }}>{props.title}</h2>
-      </div>
-      {props.children}
-    </div>
-  );
-}
-
-/* ═══ Toggle Switch ═══ */
-function Toggle(props: { checked: boolean; onChange: (val: boolean) => void }) {
-  return (
-    <button
-      class="w-12 h-7 rounded-full transition-all duration-200 relative shrink-0"
-      style={{
-        background: props.checked ? 'var(--accent)' : 'rgba(255,255,255,0.12)',
-        'box-shadow': props.checked ? '0 2px 12px var(--accent-glow)' : 'none',
-      }}
-      onClick={() => props.onChange(!props.checked)}
-    >
-      <div
-        class="w-5 h-5 rounded-full bg-white absolute top-1 transition-transform duration-200 shadow-md"
-        style={{ left: props.checked ? '26px' : '4px' }}
-      />
-    </button>
-  );
-}
-
-/* ═══ Settings Page ═══ */
 export default function SettingsPage() {
   const [accent, setAccent] = createSignal(getAccentColor());
   const [skin, setSkinState] = createSignal(getSkin());
@@ -111,26 +71,33 @@ export default function SettingsPage() {
   const [autoplay, setAutoplayState] = createSignal(getAutoplayNext());
 
   return (
-    <div class="p-6 md:p-10 max-w-3xl mx-auto animate-fade-in">
+    <div class="p-8 md:p-12 pb-20 animate-fade-in">
       {/* Header */}
-      <div class="mb-10">
-        <h1 class="text-2xl md:text-3xl font-black tracking-tight" style={{ color: 'white' }}>Settings</h1>
-        <p class="text-sm mt-2 opacity-50">Customize your experience</p>
+      <div class="mb-12">
+        <h1 class="text-3xl md:text-4xl font-black tracking-tight" style={{ color: 'white' }}>Settings</h1>
+        <p class="text-base mt-2 opacity-50">Customize your experience</p>
       </div>
 
-      {/* Accent Color */}
-      <SettingsCard icon={Palette} title="Accent Colour">
-        <p class="text-xs mb-5 opacity-40">Choose a colour that reflects your style</p>
-        <div class="flex gap-4 flex-wrap">
+      {/* Accent Colour */}
+      <div class="rounded-2xl p-8 mb-8 glass">
+        <div class="flex items-center gap-3 mb-6">
+          <div class="w-10 h-10 rounded-xl flex items-center justify-center"
+            style={{ background: 'var(--accent)', 'box-shadow': '0 2px 12px var(--accent-glow)' }}>
+            <Palette size={20} style={{ color: 'white' }} />
+          </div>
+          <h2 class="text-lg font-bold" style={{ color: 'white' }}>Accent Colour</h2>
+        </div>
+        <p class="text-sm mb-6 opacity-40">Choose a colour that reflects your style</p>
+        <div class="flex gap-5 flex-wrap">
           <For each={ACCENTS}>
             {(a) => (
               <button
-                class="w-12 h-12 rounded-full transition-all duration-200 hover:scale-110 relative"
+                class="w-14 h-14 rounded-full transition-all duration-200 hover:scale-110"
                 style={{
                   background: a.id,
                   'box-shadow': accent() === a.id
-                    ? `0 0 0 3px var(--bg), 0 0 0 5px ${a.id}, 0 4px 16px ${a.id}50`
-                    : '0 2px 8px rgba(0,0,0,0.3)',
+                    ? `0 0 0 4px var(--bg), 0 0 0 6px ${a.id}, 0 6px 20px ${a.id}50`
+                    : '0 3px 10px rgba(0,0,0,0.4)',
                 }}
                 onClick={() => { setAccent(a.id); applyAccent(a.id); }}
                 title={a.name}
@@ -138,16 +105,23 @@ export default function SettingsPage() {
             )}
           </For>
         </div>
-      </SettingsCard>
+      </div>
 
       {/* Skin */}
-      <SettingsCard icon={Paintbrush} title="Skin">
-        <p class="text-xs mb-5 opacity-40">Pick a theme for the interface</p>
-        <div class="grid grid-cols-2 gap-4">
+      <div class="rounded-2xl p-8 mb-8 glass">
+        <div class="flex items-center gap-3 mb-6">
+          <div class="w-10 h-10 rounded-xl flex items-center justify-center"
+            style={{ background: 'var(--accent)', 'box-shadow': '0 2px 12px var(--accent-glow)' }}>
+            <Paintbrush size={20} style={{ color: 'white' }} />
+          </div>
+          <h2 class="text-lg font-bold" style={{ color: 'white' }}>Skin</h2>
+        </div>
+        <p class="text-sm mb-6 opacity-40">Pick a theme for the interface</p>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
           <For each={SKINS}>
             {(s) => (
               <button
-                class="p-5 rounded-2xl text-left transition-all duration-200 relative overflow-hidden group hover:scale-[1.02]"
+                class="p-5 rounded-2xl text-left transition-all duration-200 hover:scale-[1.02]"
                 style={{
                   background: skin() === s.id ? 'var(--accent)' : s.surface,
                   border: skin() === s.id ? 'none' : '1px solid rgba(255,255,255,0.06)',
@@ -160,23 +134,30 @@ export default function SettingsPage() {
                   <div class="w-6 h-6 rounded-lg" style={{ background: s.surface }} />
                   <div class="w-4 h-6 rounded-lg" style={{ background: skin() === s.id ? 'rgba(255,255,255,0.3)' : 'var(--accent)' }} />
                 </div>
-                <span class="text-xs font-bold" style={{ color: skin() === s.id ? 'white' : 'var(--text)' }}>
+                <span class="text-sm font-bold" style={{ color: skin() === s.id ? 'white' : 'var(--text)' }}>
                   {s.name}
                 </span>
               </button>
             )}
           </For>
         </div>
-      </SettingsCard>
+      </div>
 
-      {/* Default Source */}
-      <SettingsCard icon={Globe} title="Streaming Source">
-        <p class="text-xs mb-5 opacity-40">Choose which source to use first</p>
+      {/* Streaming Source */}
+      <div class="rounded-2xl p-8 mb-8 glass">
+        <div class="flex items-center gap-3 mb-6">
+          <div class="w-10 h-10 rounded-xl flex items-center justify-center"
+            style={{ background: 'var(--accent)', 'box-shadow': '0 2px 12px var(--accent-glow)' }}>
+            <Globe size={20} style={{ color: 'white' }} />
+          </div>
+          <h2 class="text-lg font-bold" style={{ color: 'white' }}>Streaming Source</h2>
+        </div>
+        <p class="text-sm mb-6 opacity-40">Choose which source to use first</p>
         <div class="flex gap-3 flex-wrap">
           <For each={SOURCES}>
             {(s) => (
               <button
-                class="px-6 py-3 rounded-xl text-sm font-semibold transition-all duration-200 hover:scale-[1.03]"
+                class="px-8 py-3.5 rounded-xl text-base font-semibold transition-all duration-200 hover:scale-[1.03]"
                 style={{
                   background: source() === s.id ? 'var(--accent)' : 'rgba(255,255,255,0.06)',
                   color: source() === s.id ? 'white' : 'var(--text)',
@@ -190,58 +171,86 @@ export default function SettingsPage() {
             )}
           </For>
         </div>
-      </SettingsCard>
+      </div>
 
       {/* Player */}
-      <SettingsCard icon={MonitorPlay} title="Player">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm font-semibold" style={{ color: 'white' }}>Autoplay next episode</p>
-            <p class="text-xs opacity-35 mt-1">Play the next episode automatically</p>
+      <div class="rounded-2xl p-8 mb-8 glass">
+        <div class="flex items-center gap-3 mb-6">
+          <div class="w-10 h-10 rounded-xl flex items-center justify-center"
+            style={{ background: 'var(--accent)', 'box-shadow': '0 2px 12px var(--accent-glow)' }}>
+            <MonitorPlay size={20} style={{ color: 'white' }} />
           </div>
-          <Toggle
-            checked={autoplay()}
-            onChange={(v) => { setAutoplayState(v); setAutoplayNext(v); }}
-          />
+          <h2 class="text-lg font-bold" style={{ color: 'white' }}>Player</h2>
         </div>
-      </SettingsCard>
-
-      {/* Clear Data */}
-      <SettingsCard icon={Info} title="Data">
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-sm font-semibold" style={{ color: 'white' }}>Clear Continue Watching</p>
-            <p class="text-xs opacity-35 mt-1">Remove all continue watching entries</p>
+            <p class="text-base font-semibold" style={{ color: 'white' }}>Autoplay next episode</p>
+            <p class="text-sm opacity-40 mt-1">Play the next episode automatically</p>
           </div>
           <button
-            class="px-5 py-2.5 rounded-xl text-xs font-bold transition-all hover:brightness-110 shrink-0"
+            class="w-14 h-8 rounded-full transition-all duration-200 relative shrink-0"
+            style={{
+              background: autoplay() ? 'var(--accent)' : 'rgba(255,255,255,0.12)',
+              'box-shadow': autoplay() ? '0 2px 12px var(--accent-glow)' : 'none',
+            }}
+            onClick={() => { const v = !autoplay(); setAutoplayState(v); setAutoplayNext(v); }}
+          >
+            <div
+              class="w-6 h-6 rounded-full bg-white absolute top-1 transition-transform duration-200 shadow-md"
+              style={{ left: autoplay() ? '30px' : '4px' }}
+            />
+          </button>
+        </div>
+      </div>
+
+      {/* Data */}
+      <div class="rounded-2xl p-8 mb-8 glass">
+        <div class="flex items-center gap-3 mb-6">
+          <div class="w-10 h-10 rounded-xl flex items-center justify-center"
+            style={{ background: 'var(--accent)', 'box-shadow': '0 2px 12px var(--accent-glow)' }}>
+            <Info size={20} style={{ color: 'white' }} />
+          </div>
+          <h2 class="text-lg font-bold" style={{ color: 'white' }}>Data</h2>
+        </div>
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-base font-semibold" style={{ color: 'white' }}>Clear Continue Watching</p>
+            <p class="text-sm opacity-40 mt-1">Remove all continue watching entries</p>
+          </div>
+          <button
+            class="px-6 py-3 rounded-xl text-sm font-bold transition-all hover:brightness-110 shrink-0"
             style={{
               background: 'rgba(239, 68, 68, 0.15)',
               color: '#ef4444',
               border: '1px solid rgba(239, 68, 68, 0.2)',
             }}
-            onClick={() => {
-              clearAllContinueWatching();
-            }}
+            onClick={() => { clearAllContinueWatching(); }}
           >
-            Clear
+            Clear All
           </button>
         </div>
-      </SettingsCard>
+      </div>
 
       {/* About */}
-      <SettingsCard icon={Sparkles} title="About">
+      <div class="rounded-2xl p-8 glass">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-10 h-10 rounded-xl flex items-center justify-center"
+            style={{ background: 'var(--accent)', 'box-shadow': '0 2px 12px var(--accent-glow)' }}>
+            <Sparkles size={20} style={{ color: 'white' }} />
+          </div>
+          <h2 class="text-lg font-bold" style={{ color: 'white' }}>About</h2>
+        </div>
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-sm font-bold" style={{ color: 'white' }}>Tagflix v2.0</p>
-            <p class="text-xs opacity-35 mt-1">SolidJS + Electron + Capacitor</p>
+            <p class="text-base font-bold" style={{ color: 'white' }}>Tagflix v2.0</p>
+            <p class="text-sm opacity-40 mt-1">SolidJS + Electron + Capacitor</p>
           </div>
-          <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl glass shrink-0">
-            <Sparkles size={12} style={{ color: 'var(--accent)' }} />
-            <span class="text-[10px] font-bold" style={{ color: 'var(--accent)' }}>OPEN SOURCE</span>
+          <div class="flex items-center gap-2 px-4 py-2 rounded-xl glass shrink-0">
+            <Sparkles size={14} style={{ color: 'var(--accent)' }} />
+            <span class="text-xs font-bold" style={{ color: 'var(--accent)' }}>OPEN SOURCE</span>
           </div>
         </div>
-      </SettingsCard>
+      </div>
     </div>
   );
 }
