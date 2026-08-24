@@ -1,0 +1,64 @@
+import { createSignal, Show, onCleanup, type JSX } from 'solid-js';
+
+interface Props {
+  url: string;
+  title?: string;
+  onBack?: () => void;
+}
+
+export default function IframePlayer(props: Props) {
+  const [loaded, setLoaded] = createSignal(false);
+  const [error, setError] = createSignal(false);
+
+  // Reset state when URL changes
+  const resetState = () => {
+    setLoaded(false);
+    setError(false);
+  };
+
+  return (
+    <div class="fixed inset-0 z-[50] bg-black flex flex-col">
+      {/* Loading indicator */}
+      <Show when={!loaded()}>
+        <div class="absolute inset-0 flex flex-col items-center justify-center z-10 bg-black">
+          <div
+            class="w-10 h-10 rounded-full border-2 animate-spin mb-4"
+            style={{ 'border-color': 'var(--border)', 'border-top-color': 'var(--accent)' }}
+          />
+          <p class="text-sm" style={{ color: 'var(--text)' }}>
+            Loading {props.title || 'player'}...
+          </p>
+        </div>
+      </Show>
+
+      {/* Error state */}
+      <Show when={error()}>
+        <div class="absolute inset-0 flex flex-col items-center justify-center z-10 bg-black">
+          <p class="text-lg font-bold text-white mb-2">Failed to load stream</p>
+          <p class="text-sm text-gray-400 mb-6">The embed source returned an error.</p>
+          <Show when={props.onBack}>
+            <button
+              class="px-6 py-2.5 rounded-lg font-semibold text-sm text-white"
+              style={{ background: 'var(--accent)' }}
+              onClick={props.onBack}
+            >
+              Go Back
+            </button>
+          </Show>
+        </div>
+      </Show>
+
+      {/* The iframe */}
+      <iframe
+        src={props.url}
+        class="player-iframe"
+        allow="autoplay; fullscreen; picture-in-picture; encrypted-media; playback-rate"
+        allowfullscreen
+        onLoad={() => setLoaded(true)}
+        onError={() => setError(true)}
+        sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+        style={{ opacity: loaded() ? 1 : 0 }}
+      />
+    </div>
+  );
+}
