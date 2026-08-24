@@ -47,18 +47,27 @@ function createWindow() {
     mainWindow.loadURL('http://localhost:5173');
     mainWindow.webContents.openDevTools({ mode: 'detach' });
   } else {
-    const distPath = path.join(__dirname, '..', 'dist', 'index.html');
-    console.log('[tagflix] loading file:', distPath);
+    // Serve dist/ via local HTTP so cross-origin API calls (TMDB) work.
+    // file:// protocol blocks cross-origin fetch — localhost doesn't.
+    const http = require('http');
     const fs = require('fs');
-    console.log('[tagflix] __dirname exists:', fs.existsSync(__dirname));
-    console.log('[tagflix] dist path exists:', fs.existsSync(distPath));
-    // Also try listing what's in __dirname
-    try {
-      console.log('[tagflix] __dirname contents:', fs.readdirSync(__dirname));
-    } catch (e) {
-      console.log('[tagflix] readdir error:', e.message);
-    }
-    mainWindow.loadFile(distPath);
+    const distDir = path.join(__dirname, '..', 'dist');
+
+    const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.json': 'application/json', '.png': 'image/png', '.jpg': 'image/jpeg', '.woff2': 'font/woff2' };
+
+    const server = http.createServer((req, res) => {
+      let filePath = path.join(distDir, req.url === '/' ? '/index.html' : req.url);
+      if (!fs.existsSync(filePath)) filePath = path.join(distDir, 'index.html');
+      const ext = path.extname(filePath);
+      res.setHeader('Content-Type', MIME[ext] || 'application/octet-stream');
+      fs.createReadStream(filePath).pipe(res);
+    });
+
+    server.listen(0, '127.0.0.1', () => {
+      const port = server.address().port;
+      console.log('[tagflix] serving dist on http://127.0.0.1:' + port);
+      mainWindow.loadURL('http://127.0.0.1:' + port);
+    });
   }
 
   mainWindow.webContents.on('did-finish-load', () => {
@@ -78,6 +87,10 @@ function createWindow() {
         if (!window.chrome.runtime) window.chrome.runtime = { connect: () => {}, sendMessage: () => {} };
       `).catch(() => {});
     });
+  });
+
+  mainWindow.webContents.on('console-message', (event, level, message) => {
+    if (level >= 2) console.log(`[renderer] ${message}`);
   });
 
   mainWindow.once('ready-to-show', () => {
