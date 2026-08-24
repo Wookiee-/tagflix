@@ -138,7 +138,6 @@ app.whenReady().then(() => {
   session.defaultSession.webRequest.onBeforeRequest(
     { urls: adUrlPatterns },
     (details, callback) => {
-      console.log('[adblock] blocked:', details.url.slice(0, 80));
       callback({ cancel: true });
     }
   );
