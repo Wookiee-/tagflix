@@ -1,5 +1,5 @@
 import { createSignal, createResource, Show, For, onMount } from 'solid-js';
-import { useNavigate, useParams } from '@solidjs/router';
+import { useNavigate, useParams, useLocation } from '@solidjs/router';
 import {
   ArrowLeft, Bookmark, BookmarkCheck, Play, Star, Clock,
 } from 'lucide-solid';
@@ -16,8 +16,9 @@ import {
 export default function DetailPage() {
   const params = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const tmdbId = () => Number(params.id);
-  const isTv = () => window.location.pathname.startsWith('/tv/');
+  const isTv = () => location.pathname.startsWith('/tv/');
 
   // Fetch detail
   const [detail] = createResource(tmdbId, async (id) => {
