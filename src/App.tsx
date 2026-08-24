@@ -93,8 +93,8 @@ export default function App(props: { children?: JSX.Element }) {
       {/* ═══ Desktop Sidebar ═══ */}
       <Show when={!isPlayer() && !isMobile()}>
         <aside
-          class="w-16 shrink-0 flex flex-col items-center py-4 gap-1 overflow-y-auto"
-          style={{ 'border-right': '1px solid var(--border)' }}
+          class="w-16 shrink-0 flex flex-col items-center py-4 gap-1 overflow-y-auto glass-strong"
+          style={{ 'border-right': '1px solid rgba(255,255,255,0.06)' }}
         >
           {/* Logo */}
           <div
@@ -109,7 +109,7 @@ export default function App(props: { children?: JSX.Element }) {
             return (
               <A
                 href={item.path}
-                class="w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-150 relative group"
+                class="w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-200 relative group hover:scale-105"
                 classList={{
                   'text-white': isActive(item.path),
                 }}
@@ -149,12 +149,10 @@ export default function App(props: { children?: JSX.Element }) {
       {/* ═══ Mobile Bottom Tab Bar ═══ */}
       <Show when={!isPlayer() && isMobile()}>
         <nav
-          class="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around"
+          class="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around safe-bottom glass-strong"
           style={{
             height: '56px',
-            background: 'var(--bg)',
-            'border-top': '1px solid var(--border)',
-            'backdrop-filter': 'blur(12px)',
+            'border-top': '1px solid rgba(255,255,255,0.06)',
           }}
         >
           {MOBILE_NAV.map((item) => {
