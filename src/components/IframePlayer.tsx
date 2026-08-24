@@ -56,7 +56,7 @@ export default function IframePlayer(props: Props) {
         allowfullscreen
         onLoad={() => setLoaded(true)}
         onError={() => setError(true)}
-        sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+
         style={{ opacity: loaded() ? 1 : 0 }}
       />
     </div>

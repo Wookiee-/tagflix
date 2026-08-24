@@ -15,25 +15,17 @@ export const SOURCES: StreamSource[] = [
   {
     id: 'vidcore',
     name: 'VidCore',
-    movieUrl: (tmdbId) => `https://vidcore.io/embed/movie/${tmdbId}`,
+    movieUrl: (tmdbId) => `https://vidcore.io/movie/${tmdbId}?autoPlay=true`,
     tvUrl: (tmdbId, season, episode) =>
-      `https://vidcore.io/embed/tv/${tmdbId}/${season}/${episode}`,
-  },
-  {
-    id: 'vidsrc',
-    name: 'VidSrc',
-    movieUrl: (tmdbId, imdbId) =>
-      `https://vidsrc.sbs/embed/movie/${imdbId || tmdbId}`,
-    tvUrl: (tmdbId, season, episode, imdbId) =>
-      `https://vidsrc.sbs/embed/tv/${imdbId || tmdbId}/${season}/${episode}`,
+      `https://vidcore.io/tv/${tmdbId}/${season}/${episode}?autoPlay=true`,
   },
   {
     id: 'vidking',
     name: 'VidKing',
     movieUrl: (tmdbId) =>
-      `https://vidking.net/embed/movie/${tmdbId}`,
+      `https://www.vidking.net/embed/movie/${tmdbId}?autoPlay=true`,
     tvUrl: (tmdbId, season, episode) =>
-      `https://vidking.net/embed/tv/${tmdbId}/${season}/${episode}`,
+      `https://www.vidking.net/embed/tv/${tmdbId}/${season}/${episode}?autoPlay=true&nextEpisode=true&episodeSelector=true`,
   },
 ];
 
