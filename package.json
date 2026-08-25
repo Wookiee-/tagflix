@@ -8,13 +8,12 @@
   "bin": {
     "tagflix": "server.cjs"
   },
-  "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
     "start": "node server.cjs",
-    "package": "vite build && pkg . --targets node18-win-x64 --out-path dist-app && cp -r dist dist-app/dist",
+    "package": "vite build && node build-pkg.js",
     "cap:init": "npx cap init tagflix com.tagflix.app --web-dir dist",
     "cap:add": "npx cap add android",
     "cap:sync": "npx cap sync",
@@ -24,7 +23,9 @@
     "targets": [
       "node18-win-x64"
     ],
-    "outputPath": "dist-app"
+    "outputPath": "dist-app",
+    "assets": [],
+    "scripts": []
   },
   "dependencies": {
     "@capacitor/android": "^8.5.0",
