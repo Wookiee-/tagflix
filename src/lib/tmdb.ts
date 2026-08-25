@@ -89,6 +89,7 @@ export interface TMDBCredits {
 }
 
 export interface TMDBMovieDetail extends TMDBMedia {
+  tagline?: string;
   runtime: number;
   belongs_to_collection?: { id: number; name: string } | null;
   credits?: TMDBCredits;
@@ -100,6 +101,7 @@ export interface TMDBMovieDetail extends TMDBMedia {
 }
 
 export interface TMDBTvDetail extends TMDBMedia {
+  tagline?: string;
   number_of_seasons: number;
   number_of_episodes: number;
   seasons: TMDBSeason[];
@@ -215,4 +217,13 @@ export function mediaType(m: TMDBMedia): 'movie' | 'tv' {
 
 export function imdbIdFromExternalIds(ids: { imdb_id?: string }): string {
   return ids.imdb_id || '';
+}
+
+export async function getSimilar(id: number, type: 'movie' | 'tv'): Promise<TMDBMedia[]> {
+  const data = await tmdbFetch<{ results: TMDBMedia[] }>(`/${type}/${id}/similar`);
+  return data.results.map(r => ({ ...r, media_type: type }));
+}
+
+export function matchPercent(vote: number): number {
+  return Math.round(vote * 10);
 }

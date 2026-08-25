@@ -5,8 +5,8 @@ import {
   Calendar, DollarSign, TrendingUp, User, Clapperboard,
 } from 'lucide-solid';
 import {
-  getMovieDetail, getTvDetail, getSeasonEpisodes,
-  imageUrl, backdropUrl, mediaTitle, mediaYear, mediaType,
+  getMovieDetail, getTvDetail, getSeasonEpisodes, getSimilar,
+  imageUrl, backdropUrl, mediaTitle, mediaYear, mediaType, matchPercent,
   type TMDBMedia, type TMDBMovieDetail, type TMDBTvDetail, type TMDBEpisode,
   type TMDBCastMember, type TMDBCrewMember,
 } from '../lib/tmdb';
@@ -15,39 +15,73 @@ import {
   isFavourite, toggleFavourite, getActiveSource, setActiveSource,
 } from '../lib/storage';
 
-/* ═══ Actor Card ═══ */
+/* ═══ Circular Actor Card ═══ */
 function ActorCard(props: { actor: TMDBCastMember }) {
   return (
-    <div class="shrink-0 w-[100px] md:w-[120px] text-center group">
-      <div class="w-full aspect-[2/3] rounded-xl overflow-hidden mb-2 transition-all duration-300 group-hover:ring-2 group-hover:ring-white/20"
+    <div class="shrink-0 w-[90px] md:w-[105px] text-center group">
+      <div class="w-[72px] md:w-[85px] h-[72px] md:h-[85px] mx-auto rounded-full overflow-hidden mb-2 transition-all duration-300 group-hover:ring-2 group-hover:ring-white/30 group-hover:scale-105"
         style={{ 'box-shadow': '0 4px 16px rgba(0,0,0,0.4)' }}>
         <Show when={props.actor.profile_path} fallback={
           <div class="w-full h-full flex items-center justify-center" style={{ background: 'var(--surface)' }}>
-            <User size={28} style={{ color: 'var(--text-dim)' }} />
+            <User size={24} style={{ color: 'var(--text-dim)' }} />
           </div>
         }>
           <img
             src={imageUrl(props.actor.profile_path, 'w185')}
             alt={props.actor.name}
-            class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+            class="w-full h-full object-cover"
             loading="lazy"
           />
         </Show>
       </div>
-      <p class="text-xs font-bold text-white truncate">{props.actor.name}</p>
-      <p class="text-[11px] text-white/35 truncate mt-0.5">{props.actor.character}</p>
+      <p class="text-[11px] font-bold text-white truncate px-1">{props.actor.name}</p>
+      <p class="text-[10px] text-white/30 truncate mt-0.5 px-1">{props.actor.character}</p>
     </div>
   );
 }
 
-/* ═══ Info Pill ═══ */
-function InfoPill(props: { icon: any; label: string; value: string }) {
+/* ═══ Similar Card ═══ */
+function SimilarCard(props: { item: TMDBMedia }) {
+  const navigate = useNavigate();
+  const type = () => mediaType(props.item);
   return (
-    <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg" style={{ background: 'rgba(255,255,255,0.05)' }}>
-      <props.icon size={13} style={{ color: 'var(--accent)' }} />
-      <span class="text-[11px] text-white/35 font-medium">{props.label}</span>
-      <span class="text-xs font-bold text-white/80">{props.value}</span>
-    </div>
+    <button
+      class="shrink-0 w-[150px] md:w-[180px] text-left group"
+      onClick={() => navigate(`/${type()}/${props.item.id}`)}
+    >
+      <div class="relative w-full aspect-[2/3] rounded-lg overflow-hidden mb-2 transition-all duration-300 group-hover:ring-2 group-hover:ring-white/20 group-hover:scale-[1.03]"
+        style={{ 'box-shadow': '0 4px 16px rgba(0,0,0,0.4)' }}>
+        <Show when={props.item.poster_path} fallback={
+          <div class="w-full h-full flex items-center justify-center px-2 text-center text-[10px] font-bold"
+            style={{ background: 'var(--surface)', color: 'var(--text)' }}>
+            {mediaTitle(props.item)}
+          </div>
+        }>
+          <img
+            src={imageUrl(props.item.poster_path, 'w342')}
+            alt={mediaTitle(props.item)}
+            class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+            loading="lazy"
+          />
+        </Show>
+        {/* Hover play overlay */}
+        <div class="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/40 transition-colors">
+          <div class="w-10 h-10 rounded-full bg-white/90 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg">
+            <Play size={16} fill="black" class="ml-0.5" style={{ color: 'black' }} />
+          </div>
+        </div>
+        <Show when={props.item.vote_average > 0}>
+          <div class="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-black/60 text-white backdrop-blur-sm flex items-center gap-0.5">
+            <Star size={9} fill="#22c55e" style={{ color: '#22c55e' }} />
+            {matchPercent(props.item.vote_average)}%
+          </div>
+        </Show>
+      </div>
+      <p class="text-xs font-semibold truncate text-white/80 group-hover:text-white">{mediaTitle(props.item)}</p>
+      <Show when={props.item.overview}>
+        <p class="text-[10px] text-white/30 line-clamp-2 mt-0.5 leading-relaxed">{props.item.overview}</p>
+      </Show>
+    </button>
   );
 }
 
@@ -61,6 +95,10 @@ export default function DetailPage() {
   const [detail] = createResource(tmdbId, async (id) => {
     if (isTv()) return getTvDetail(id);
     return getMovieDetail(id);
+  });
+
+  const [similar] = createResource(tmdbId, async (id) => {
+    return getSimilar(id, isTv() ? 'tv' : 'movie');
   });
 
   const [activeSeason, setActiveSeason] = createSignal(1);
@@ -164,11 +202,7 @@ export default function DetailPage() {
           const runtime = () => isTv()
             ? (tvData().episode_run_time?.[0] || 0)
             : movieData().runtime || 0;
-
-          const director = () => {
-            const credits = isTv() ? tvData().credits : movieData().credits;
-            return credits?.crew?.find(c => c.job === 'Director');
-          };
+          const tagline = () => (data as any).tagline || '';
 
           const topCast = () => {
             const credits = isTv() ? tvData().credits : movieData().credits;
@@ -178,7 +212,7 @@ export default function DetailPage() {
           return (
             <div>
               {/* Hero Backdrop */}
-              <div class="relative w-full h-[50vh] min-h-[350px] max-h-[550px] overflow-hidden">
+              <div class="relative w-full h-[55vh] min-h-[380px] max-h-[600px] overflow-hidden">
                 <Show when={data.backdrop_path} fallback={
                   <div class="absolute inset-0" style={{ background: 'var(--surface)' }} />
                 }>
@@ -190,76 +224,68 @@ export default function DetailPage() {
                   />
                 </Show>
 
+                {/* Gradients */}
                 <div class="absolute inset-0" style={{
-                  background: 'linear-gradient(to top, var(--bg) 5%, rgba(10,10,15,0.5) 40%, rgba(10,10,15,0.2) 100%)',
+                  background: 'linear-gradient(to top, var(--bg) 0%, rgba(10,10,15,0.4) 35%, rgba(10,10,15,0.15) 100%)',
                 }} />
                 <div class="absolute inset-0" style={{
-                  background: 'linear-gradient(to right, rgba(10,10,15,0.7) 0%, transparent 60%)',
+                  background: 'linear-gradient(to right, rgba(10,10,15,0.85) 0%, rgba(10,10,15,0.4) 45%, transparent 70%)',
                 }} />
 
                 {/* Back button */}
                 <button
-                  class="absolute top-5 left-5 z-20 w-10 h-10 rounded-full flex items-center justify-center bg-black/50 backdrop-blur-md text-white hover:bg-black/70 transition-colors border border-white/10"
+                  class="absolute top-5 left-5 z-20 w-9 h-9 rounded-full flex items-center justify-center bg-black/40 backdrop-blur-md text-white/80 hover:text-white hover:bg-black/60 transition-colors border border-white/10"
                   onClick={() => navigate(-1)}
                 >
-                  <ArrowLeft size={18} />
+                  <ArrowLeft size={16} />
                 </button>
               </div>
 
               {/* Content */}
-              <div class="relative px-6 md:px-12 -mt-44 z-10 pb-12">
-                <div class="flex gap-6 md:gap-10">
+              <div class="relative px-6 md:px-12 -mt-52 z-10 pb-12">
+                <div class="flex gap-6 md:gap-8">
                   {/* Poster */}
                   <Show when={data.poster_path}>
-                    <div class="shrink-0 w-[130px] md:w-[190px] aspect-[2/3] rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/10"
-                      style={{ 'box-shadow': '0 16px 50px rgba(0,0,0,0.5)' }}>
+                    <div class="shrink-0 w-[120px] md:w-[170px] aspect-[2/3] rounded-xl overflow-hidden shadow-2xl"
+                      style={{ 'box-shadow': '0 12px 40px rgba(0,0,0,0.6)' }}>
                       <img src={imageUrl(data.poster_path, 'w342')} alt="" class="w-full h-full object-cover" />
                     </div>
                   </Show>
 
                   {/* Info */}
-                  <div class="flex-1 pt-20 md:pt-24">
-                    <h1 class="text-3xl md:text-5xl font-black mb-4 leading-tight tracking-tight text-white">
+                  <div class="flex-1 pt-16 md:pt-20">
+                    <h1 class="text-3xl md:text-4xl font-black mb-3 leading-tight tracking-tight text-white">
                       {mediaTitle(data)}
                     </h1>
 
-                    {/* Metadata pills */}
-                    <div class="flex items-center gap-2 mb-4 text-sm flex-wrap">
+                    {/* Match + Year + Runtime */}
+                    <div class="flex items-center gap-2 mb-3 text-sm flex-wrap">
                       <Show when={data.vote_average > 0}>
-                        <span class="flex items-center gap-1.5 font-bold text-yellow-400 text-sm">
-                          <Star size={14} fill="currentColor" /> {data.vote_average.toFixed(1)}
+                        <span class="font-bold text-green-400">
+                          {matchPercent(data.vote_average)}% Match
                         </span>
                       </Show>
-                      <span class="text-white/20">•</span>
-                      <span class="text-white/60 font-medium text-sm">{mediaYear(data)}</span>
+                      <span class="text-white/25">•</span>
+                      <span class="text-white/60 font-medium">{mediaYear(data)}</span>
                       <Show when={runtime() > 0}>
-                        <span class="text-white/20">•</span>
-                        <span class="text-white/60 font-medium text-sm flex items-center gap-1">
-                          <Clock size={12} />
-                          {Math.floor(runtime() / 60)}h {runtime() % 60}m
-                        </span>
+                        <span class="text-white/25">•</span>
+                        <span class="text-white/60 font-medium">{Math.floor(runtime() / 60)}h {runtime() % 60}m</span>
                       </Show>
                       <Show when={isTv()}>
-                        <span class="text-white/20">•</span>
-                        <span class="text-white/60 font-medium text-sm">
+                        <span class="text-white/25">•</span>
+                        <span class="text-white/60 font-medium">
                           {tvData().number_of_seasons} Season{tvData().number_of_seasons > 1 ? 's' : ''}
                         </span>
                       </Show>
-                      <Show when={data.status}>
-                        <span class="text-white/20">•</span>
-                        <span class="text-white/50 font-medium text-xs px-2 py-0.5 rounded-md glass">{data.status}</span>
-                      </Show>
                     </div>
 
-                    {/* Genres */}
+                    {/* Genres inline */}
                     <Show when={data.genres?.length}>
-                      <div class="flex gap-2 mb-4 flex-wrap">
+                      <div class="flex items-center gap-2 mb-3 text-sm flex-wrap">
                         <For each={data.genres}>
-                          {(g) => (
-                            <span
-                              class="text-xs px-3 py-1 rounded-full font-medium glass"
-                              style={{ color: 'var(--accent)' }}
-                            >
+                          {(g, i) => (
+                            <span class="text-white/50 font-medium">
+                              {i() > 0 && <span class="text-white/20 mr-2">•</span>}
                               {g.name}
                             </span>
                           )}
@@ -267,11 +293,10 @@ export default function DetailPage() {
                       </div>
                     </Show>
 
-                    {/* Director */}
-                    <Show when={director()}>
-                      <p class="text-xs text-white/40 mb-3">
-                        <span class="font-semibold text-white/60">Director:</span>{' '}
-                        {director()!.name}
+                    {/* Tagline */}
+                    <Show when={tagline()}>
+                      <p class="text-sm italic text-white/40 mb-4 max-w-xl">
+                        "{tagline()}"
                       </p>
                     </Show>
 
@@ -280,7 +305,7 @@ export default function DetailPage() {
                       {data.overview || 'No description available.'}
                     </p>
 
-                    {/* Action buttons - smaller */}
+                    {/* Action buttons */}
                     <div class="flex gap-3 flex-wrap mb-8">
                       <button class="btn-primary btn-sm" onClick={() => playWithSource()}>
                         <Play size={16} fill="white" /> Play
@@ -289,41 +314,17 @@ export default function DetailPage() {
                         <Show when={fav()} fallback={<Bookmark size={16} />}>
                           <BookmarkCheck size={16} />
                         </Show>
-                        {fav() ? 'In Library' : 'Add to Library'}
+                        {fav() ? 'Tagged' : 'Tag It'}
                       </button>
                     </div>
-
-                    {/* Extra info row */}
-                    <Show when={isTv()}>
-                      <div class="flex gap-4 flex-wrap mb-2">
-                        <InfoPill icon={Tv} label="Seasons" value={`${tvData().number_of_seasons}`} />
-                        <InfoPill icon={Film} label="Episodes" value={`${tvData().number_of_episodes}`} />
-                        <Show when={tvData().created_by?.length}>
-                          <InfoPill icon={User} label="Created by" value={tvData().created_by![0].name} />
-                        </Show>
-                      </div>
-                    </Show>
-                    <Show when={!isTv()}>
-                      <div class="flex gap-4 flex-wrap mb-2">
-                        <Show when={movieData().budget && movieData().budget! > 0}>
-                          <InfoPill icon={DollarSign} label="Budget" value={`$${(movieData().budget! / 1_000_000).toFixed(0)}M`} />
-                        </Show>
-                        <Show when={movieData().revenue && movieData().revenue! > 0}>
-                          <InfoPill icon={TrendingUp} label="Revenue" value={`$${(movieData().revenue! / 1_000_000).toFixed(0)}M`} />
-                        </Show>
-                        <Show when={movieData().belongs_to_collection}>
-                          <InfoPill icon={Clapperboard} label="Collection" value={movieData().belongs_to_collection!.name} />
-                        </Show>
-                      </div>
-                    </Show>
                   </div>
                 </div>
 
-                {/* Cast section */}
+                {/* Cast - circular photos */}
                 <Show when={topCast().length > 0}>
-                  <div class="mt-10">
+                  <div class="mt-8">
                     <h3 class="text-xs font-bold mb-4 uppercase tracking-widest text-white/30">Cast</h3>
-                    <div class="flex gap-3 overflow-x-auto pb-3">
+                    <div class="flex gap-2 overflow-x-auto pb-3">
                       <For each={topCast()}>
                         {(actor) => <ActorCard actor={actor} />}
                       </For>
@@ -331,19 +332,100 @@ export default function DetailPage() {
                   </div>
                 </Show>
 
+                {/* TV Episodes - horizontal cards */}
+                <Show when={isTv()}>
+                  <div class="mt-8">
+                    <Show when={tvData().seasons?.length}>
+                      <div class="flex items-center gap-4 mb-4">
+                        <h3 class="text-xs font-bold uppercase tracking-widest text-white/30">Seasons</h3>
+                        <div class="flex gap-2">
+                          <For each={tvData().seasons.filter(s => s.season_number > 0)}>
+                            {(season) => {
+                              const isActive = () => activeSeason() === season.season_number;
+                              return (
+                                <button
+                                  class="px-3 py-1 rounded-md text-xs font-bold transition-all"
+                                  style={{
+                                    background: isActive() ? 'var(--accent)' : 'rgba(255,255,255,0.06)',
+                                    color: isActive() ? 'white' : 'var(--text)',
+                                  }}
+                                  onClick={() => setActiveSeason(season.season_number)}
+                                >
+                                  {season.name || `S${season.season_number}`}
+                                </button>
+                              );
+                            }}
+                          </For>
+                        </div>
+                      </div>
+                    </Show>
+
+                    {/* Horizontal episode cards */}
+                    <div class="flex gap-3 overflow-x-auto pb-3">
+                      <For each={episodes()}>
+                        {(ep) => (
+                          <button
+                            class="shrink-0 w-[200px] md:w-[240px] text-left group"
+                            onClick={() => playEpisode(ep)}
+                          >
+                            <div class="relative w-full aspect-video rounded-lg overflow-hidden mb-2 transition-all duration-300 group-hover:ring-2 group-hover:ring-white/20 group-hover:scale-[1.03]"
+                              style={{ 'box-shadow': '0 4px 16px rgba(0,0,0,0.4)' }}>
+                              <Show when={ep.still_path} fallback={
+                                <div class="w-full h-full flex items-center justify-center text-white/15 text-xs" style={{ background: 'var(--surface)' }}>
+                                  No Preview
+                                </div>
+                              }>
+                                <img src={imageUrl(ep.still_path, 'w300')} alt="" class="w-full h-full object-cover" />
+                              </Show>
+                              {/* Hover play */}
+                              <div class="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/30 transition-colors">
+                                <div class="w-10 h-10 rounded-full bg-white/90 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg">
+                                  <Play size={16} fill="black" class="ml-0.5" style={{ color: 'black' }} />
+                                </div>
+                              </div>
+                              {/* Episode badge */}
+                              <div class="absolute bottom-1.5 left-1.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-black/60 text-white/70 backdrop-blur-sm">
+                                Episode {ep.episode_number}
+                              </div>
+                              <Show when={ep.vote_average > 0}>
+                                <div class="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-black/60 text-white backdrop-blur-sm flex items-center gap-0.5">
+                                  <Star size={9} fill="#22c55e" style={{ color: '#22c55e' }} />
+                                  {matchPercent(ep.vote_average)}%
+                                </div>
+                              </Show>
+                            </div>
+                            <p class="text-xs font-bold truncate text-white/80">{ep.name}</p>
+                          </button>
+                        )}
+                      </For>
+                    </div>
+                  </div>
+                </Show>
+
+                {/* More Like This */}
+                <Show when={similar() && similar()!.length > 0}>
+                  <div class="mt-10">
+                    <h3 class="text-xs font-bold mb-4 uppercase tracking-widest text-white/30">More Like This</h3>
+                    <div class="flex gap-3 overflow-x-auto pb-3">
+                      <For each={similar()!.slice(0, 12)}>
+                        {(item) => <SimilarCard item={item} />}
+                      </For>
+                    </div>
+                  </div>
+                </Show>
+
                 {/* Source Picker */}
-                <div class="mt-8 mb-8">
+                <div class="mt-8 mb-4">
                   <h3 class="text-xs font-bold mb-3 uppercase tracking-widest text-white/30">Play Source</h3>
                   <div class="flex gap-2 flex-wrap">
                     <For each={SOURCES}>
                       {(source) => (
                         <button
-                          class="px-5 py-2 rounded-lg text-sm font-semibold transition-all"
+                          class="px-4 py-1.5 rounded-lg text-xs font-semibold transition-all"
                           style={{
                             background: activeSource() === source.id ? 'var(--accent)' : 'rgba(255,255,255,0.06)',
                             color: activeSource() === source.id ? 'white' : 'var(--text)',
                             border: activeSource() === source.id ? 'none' : '1px solid rgba(255,255,255,0.1)',
-                            'box-shadow': activeSource() === source.id ? '0 2px 12px var(--accent-glow)' : 'none',
                           }}
                           onClick={() => {
                             setActiveSrc(source.id);
@@ -356,103 +438,6 @@ export default function DetailPage() {
                     </For>
                   </div>
                 </div>
-
-                {/* TV Seasons & Episodes */}
-                <Show when={isTv()}>
-                  <div class="mt-4">
-                    <Show when={tvData().seasons?.length}>
-                      <h3 class="text-xs font-bold mb-3 uppercase tracking-widest text-white/30">Seasons</h3>
-                      <div class="flex gap-3 overflow-x-auto pb-3 mb-6">
-                        <For each={tvData().seasons.filter(s => s.season_number > 0)}>
-                          {(season) => {
-                            const isActive = () => activeSeason() === season.season_number;
-                            return (
-                              <button
-                                class="shrink-0 w-[100px] md:w-[120px] text-left transition-all group"
-                                onClick={() => setActiveSeason(season.season_number)}
-                              >
-                                <div
-                                  class="w-full aspect-[2/3] rounded-xl overflow-hidden mb-2 relative transition-all duration-300"
-                                  style={{
-                                    opacity: isActive() ? 1 : 0.55,
-                                    'box-shadow': isActive() ? '0 0 0 3px var(--accent-glow)' : 'none',
-                                  }}
-                                >
-                                  <Show when={season.poster_path} fallback={
-                                    <div class="w-full h-full flex items-center justify-center text-sm font-bold"
-                                      style={{ background: 'var(--surface)', color: 'var(--text)' }}>
-                                      S{season.season_number}
-                                    </div>
-                                  }>
-                                    <img
-                                      src={imageUrl(season.poster_path, 'w185')}
-                                      alt={`Season ${season.season_number}`}
-                                      class="w-full h-full object-cover"
-                                      loading="lazy"
-                                    />
-                                  </Show>
-                                </div>
-                                <p class="text-xs font-bold truncate" style={{ color: isActive() ? 'var(--accent)' : 'white' }}>
-                                  {season.name || `Season ${season.season_number}`}
-                                </p>
-                                <p class="text-[11px] text-white/30 mt-0.5 font-medium">
-                                  {season.episode_count} ep{season.episode_count !== 1 ? 's' : ''}
-                                </p>
-                              </button>
-                            );
-                          }}
-                        </For>
-                      </div>
-                    </Show>
-
-                    <div class="flex flex-col gap-2">
-                      <For each={episodes()}>
-                        {(ep) => (
-                          <button
-                            class="flex gap-4 p-3 rounded-xl text-left transition-all hover:bg-white/[0.06] group glass-card"
-                            onClick={() => playEpisode(ep)}
-                          >
-                            <div class="shrink-0 w-[140px] aspect-video rounded-lg overflow-hidden bg-black/30 relative">
-                              <Show when={ep.still_path} fallback={
-                                <div class="w-full h-full flex items-center justify-center text-white/20 text-xs">No image</div>
-                              }>
-                                <img src={imageUrl(ep.still_path, 'w300')} alt="" class="w-full h-full object-cover" />
-                              </Show>
-                              <div class="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/40 transition-colors">
-                                <div class="w-10 h-10 rounded-full bg-white/95 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-xl">
-                                  <Play size={14} fill="black" class="ml-0.5" style={{ color: 'black' }} />
-                                </div>
-                              </div>
-                              <div class="absolute bottom-1 right-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-black/70 text-white backdrop-blur-sm">
-                                {ep.episode_number}
-                              </div>
-                            </div>
-
-                            <div class="flex-1 min-w-0 py-0.5">
-                              <p class="text-sm font-bold truncate" style={{ color: 'white' }}>
-                                {ep.episode_number}. {ep.name}
-                              </p>
-                              <Show when={ep.air_date}>
-                                <p class="text-[11px] text-white/30 mt-1 font-medium">{ep.air_date}</p>
-                              </Show>
-                              <Show when={ep.overview}>
-                                <p class="text-xs text-white/40 line-clamp-2 mt-1.5 leading-relaxed">{ep.overview}</p>
-                              </Show>
-                            </div>
-
-                            <Show when={ep.vote_average > 0}>
-                              <div class="shrink-0 flex items-start pt-1">
-                                <span class="text-xs font-bold text-yellow-400 flex items-center gap-1">
-                                  <Star size={11} fill="currentColor" /> {ep.vote_average.toFixed(1)}
-                                </span>
-                              </div>
-                            </Show>
-                          </button>
-                        )}
-                      </For>
-                    </div>
-                  </div>
-                </Show>
               </div>
             </div>
           );

@@ -1,7 +1,7 @@
 import { createSignal, onMount, onCleanup, Show, For } from 'solid-js';
 import { useNavigate } from '@solidjs/router';
 import type { TMDBMedia } from '../lib/tmdb';
-import { getTrending, getPopularMovies, getPopularTV, imageUrl, backdropUrl, mediaTitle, mediaYear, mediaType } from '../lib/tmdb';
+import { getTrending, getPopularMovies, getPopularTV, imageUrl, backdropUrl, mediaTitle, mediaYear, mediaType, matchPercent } from '../lib/tmdb';
 import { getContinueWatching, removeContinueWatching, clearAllContinueWatching, type ContinueWatching } from '../lib/storage';
 import { Play, Star, ChevronRight, ChevronLeft, Info, X } from 'lucide-solid';
 
@@ -69,25 +69,31 @@ function HeroCarousel(props: { items: TMDBMedia[] }) {
 
             {/* Content */}
             <div class="absolute bottom-0 left-0 p-8 md:p-14 max-w-3xl z-10">
-              <div class="flex items-center gap-3 mb-4">
-                <span class="text-xs font-bold uppercase tracking-widest px-4 py-1.5 rounded-lg glass-strong text-white/90">
-                  {type(item) === 'movie' ? '🎬 Movie' : '📺 TV Series'}
+              <div class="mb-3">
+                <span class="text-[11px] font-bold uppercase tracking-[0.2em] px-3 py-1 rounded-md glass-strong text-white/70">
+                  Featured
                 </span>
-                <Show when={item.vote_average > 0}>
-                  <span class="flex items-center gap-1.5 text-sm font-bold text-yellow-400">
-                    <Star size={14} fill="currentColor" /> {item.vote_average.toFixed(1)}
-                  </span>
-                </Show>
-                <span class="text-sm text-white/40 font-medium">{mediaYear(item)}</span>
               </div>
 
-              <h1 class="text-4xl md:text-6xl font-black mb-4 leading-[1.05] tracking-tight text-white drop-shadow-lg">
+              <h1 class="text-4xl md:text-6xl font-black mb-3 leading-[1.05] tracking-tight text-white drop-shadow-lg">
                 {mediaTitle(item)}
               </h1>
 
-              <p class="text-base md:text-lg text-white/60 line-clamp-3 mb-8 max-w-xl leading-relaxed">
-                {item.overview}
-              </p>
+              <div class="flex items-center gap-2 mb-3 text-sm flex-wrap">
+                <Show when={item.vote_average > 0}>
+                  <span class="font-bold text-green-400">
+                    {matchPercent(item.vote_average)}% Match
+                  </span>
+                </Show>
+                <span class="text-white/30">•</span>
+                <span class="text-white/60 font-medium">{mediaYear(item)}</span>
+              </div>
+
+              <Show when={item.overview}>
+                <p class="text-sm md:text-base text-white/55 line-clamp-3 mb-6 max-w-xl leading-relaxed">
+                  {item.overview}
+                </p>
+              </Show>
 
               <div class="flex items-center gap-3">
                 <button
