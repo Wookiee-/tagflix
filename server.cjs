@@ -119,6 +119,7 @@ function getBrowserArgs(browser, url) {
     args.push('--no-first-run');
     args.push('--no-default-browser-check');
     args.push('--disable-sync');
+    args.push('--block-new-web-contents');
 
     if (browser.name === 'edge') {
       args.push('--disable-features=msEdgeFirstRunExperience,msEdgeWelcomePage');
