@@ -2,6 +2,7 @@ const http = require('http');
 const path = require('path');
 const fs = require('fs');
 const { spawn, execSync } = require('child_process');
+const os = require('os');
 
 const PORT = process.env.PORT || 5173;
 
@@ -23,7 +24,6 @@ function log(msg) {
 
 log('[tagflix] starting...');
 log(`[tagflix] isPkg=${isPkg}`);
-log(`[tagflix] process.execPath=${process.execPath}`);
 log(`[tagflix] distDir=${distDir}`);
 log(`[tagflix] distDir exists=${fs.existsSync(distDir)}`);
 
@@ -35,7 +35,6 @@ const MIME = {
   '.ttf': 'font/ttf', '.ico': 'image/x-icon',
 };
 
-// Minimal static file server with SPA fallback
 const server = http.createServer((req, res) => {
   try {
     const url = new URL(req.url, `http://127.0.0.1:${PORT}`);
@@ -55,9 +54,6 @@ const server = http.createServer((req, res) => {
   }
 });
 
-/**
- * Returns the full path to the first installed Chromium browser, or null.
- */
 function findBrowserPath() {
   const platform = process.platform;
 
@@ -108,27 +104,31 @@ server.listen(PORT, '127.0.0.1', () => {
   const browserPath = findBrowserPath();
 
   if (browserPath) {
-    log(`[tagflix] launching ${browserPath} in app mode...`);
+    // Use a separate user-data-dir so the browser runs independently
+    // from any existing Edge/Chrome instance. This means the --app
+    // window gets its own process that we can track for shutdown.
+    const profileDir = path.join(os.tmpdir(), 'tagflix-profile');
 
-    // Small delay to ensure server is fully ready
+    log(`[tagflix] launching ${browserPath} with profile ${profileDir}`);
+
     setTimeout(() => {
       const browser = spawn(browserPath, [
         `--app=${targetUrl}`,
         '--window-size=1280,720',
         '--window-position=0,0',
         '--disable-features=TranslateUI',
+        `--user-data-dir=${profileDir}`,
       ], { detached: false, stdio: 'ignore' });
 
       log(`[tagflix] browser spawned with pid ${browser.pid}`);
 
-      browser.on('close', () => {
-        log('[tagflix] browser closed — shutting down');
+      browser.on('close', (code) => {
+        log(`[tagflix] browser closed (code=${code}) — shutting down`);
         process.exit(0);
       });
 
       browser.on('error', (err) => {
-        log(`[tagflix] failed to launch browser: ${err.message}`);
-        log(`[tagflix] open ${targetUrl} in your browser`);
+        log(`[tagflix] browser error: ${err.message}`);
       });
     }, 500);
   } else {
@@ -136,7 +136,11 @@ server.listen(PORT, '127.0.0.1', () => {
   }
 });
 
-// Keep process alive
+process.on('SIGINT', () => {
+  log('[tagflix] shutting down');
+  process.exit(0);
+});
+
 process.on('uncaughtException', (err) => {
   log(`[tagflix] uncaught: ${err.message}`);
 });
