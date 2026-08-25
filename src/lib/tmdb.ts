@@ -67,9 +67,36 @@ export interface TMDBMedia {
   media_type?: string;
 }
 
+export interface TMDBCastMember {
+  id: number;
+  name: string;
+  character: string;
+  profile_path: string | null;
+  order: number;
+}
+
+export interface TMDBCrewMember {
+  id: number;
+  name: string;
+  job: string;
+  department: string;
+  profile_path: string | null;
+}
+
+export interface TMDBCredits {
+  cast: TMDBCastMember[];
+  crew: TMDBCrewMember[];
+}
+
 export interface TMDBMovieDetail extends TMDBMedia {
   runtime: number;
   belongs_to_collection?: { id: number; name: string } | null;
+  credits?: TMDBCredits;
+  videos?: { results: { key: string; site: string; type: string }[] };
+  status?: string;
+  budget?: number;
+  revenue?: number;
+  production_companies?: { id: number; name: string; logo_path: string | null }[];
 }
 
 export interface TMDBTvDetail extends TMDBMedia {
@@ -77,6 +104,11 @@ export interface TMDBTvDetail extends TMDBMedia {
   number_of_episodes: number;
   seasons: TMDBSeason[];
   episode_run_time: number[];
+  credits?: TMDBCredits;
+  status?: string;
+  created_by?: { id: number; name: string }[];
+  networks?: { id: number; name: string; logo_path: string | null }[];
+  production_companies?: { id: number; name: string; logo_path: string | null }[];
 }
 
 export interface TMDBSeason {

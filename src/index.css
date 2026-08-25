@@ -164,6 +164,11 @@ button {
 .btn-primary:active {
   transform: scale(0.97);
 }
+.btn-primary.btn-sm {
+  padding: 10px 22px;
+  font-size: 13px;
+  gap: 8px;
+}
 
 .btn-secondary {
   display: inline-flex;
@@ -183,6 +188,11 @@ button {
   background: rgba(255, 255, 255, 0.18);
   border-color: rgba(255, 255, 255, 0.25);
   transform: scale(1.02);
+}
+.btn-secondary.btn-sm {
+  padding: 10px 18px;
+  font-size: 13px;
+  gap: 8px;
 }
 
 /* ═══ Carousel dots ═══ */

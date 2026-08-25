@@ -1,6 +1,6 @@
 import { createSignal, For } from 'solid-js';
 import {
-  Palette, Paintbrush, Globe, Info, MonitorPlay, Sparkles,
+  Palette, Paintbrush, Globe, Info, MonitorPlay, Sparkles, Trash2, ExternalLink,
 } from 'lucide-solid';
 import {
   getAccentColor, setAccentColor, getSkin, setSkin,
@@ -64,16 +64,20 @@ function applySkin(skinId: string) {
   r.style.setProperty('--text', s.text);
 }
 
-function SettingsCard(props: { icon: any; title: string; children: any }) {
+/* ═══ Settings Section ═══ */
+function Section(props: { icon: any; title: string; desc?: string; children: any }) {
   return (
-    <div class="glass-card p-8 mb-6">
-      <div class="flex items-center gap-4 mb-6">
-        <div class="w-12 h-12 rounded-2xl flex items-center justify-center"
-          style={{ background: 'var(--accent)', 'box-shadow': '0 4px 16px var(--accent-glow)' }}>
-          <props.icon size={22} style={{ color: 'white' }} />
+    <div class="mb-8">
+      <div class="flex items-center gap-3 mb-5">
+        <div class="w-8 h-8 rounded-lg flex items-center justify-center"
+          style={{ background: 'rgba(255,255,255,0.06)' }}>
+          <props.icon size={16} style={{ color: 'var(--accent)' }} />
         </div>
         <div>
-          <h2 class="text-xl font-bold text-white">{props.title}</h2>
+          <h2 class="text-base font-bold text-white">{props.title}</h2>
+          <Show when={props.desc}>
+            <p class="text-xs text-white/30 mt-0.5">{props.desc}</p>
+          </Show>
         </div>
       </div>
       {props.children}
@@ -88,26 +92,25 @@ export default function SettingsPage() {
   const [autoplay, setAutoplayState] = createSignal(getAutoplayNext());
 
   return (
-    <div class="p-8 md:p-14 pb-24 animate-fade-in">
+    <div class="p-6 md:p-10 pb-24 animate-fade-in max-w-3xl mx-auto">
       {/* Header */}
-      <div class="mb-12">
-        <h1 class="text-4xl md:text-5xl font-black tracking-tight text-white">Settings</h1>
-        <p class="text-lg mt-3 text-white/40">Customize your experience</p>
+      <div class="mb-10">
+        <h1 class="text-2xl md:text-3xl font-black tracking-tight text-white">Settings</h1>
+        <p class="text-sm mt-2 text-white/35">Customize your experience</p>
       </div>
 
       {/* Accent Colour */}
-      <SettingsCard icon={Palette} title="Accent Colour">
-        <p class="text-base mb-8 text-white/40">Choose a colour that reflects your style</p>
-        <div class="flex gap-6 flex-wrap">
+      <Section icon={Palette} title="Accent Colour" desc="Choose a colour that reflects your style">
+        <div class="flex gap-4 flex-wrap">
           <For each={ACCENTS}>
             {(a) => (
               <button
-                class="w-16 h-16 rounded-full transition-all duration-200 hover:scale-110"
+                class="w-10 h-10 rounded-full transition-all duration-200 hover:scale-110"
                 style={{
                   background: a.id,
                   'box-shadow': accent() === a.id
-                    ? `0 0 0 5px var(--bg), 0 0 0 7px ${a.id}, 0 8px 30px ${a.id}60`
-                    : '0 4px 16px rgba(0,0,0,0.4)',
+                    ? `0 0 0 3px var(--bg), 0 0 0 5px ${a.id}, 0 4px 16px ${a.id}50`
+                    : '0 2px 8px rgba(0,0,0,0.4)',
                 }}
                 onClick={() => { setAccent(a.id); applyAccent(a.id); }}
                 title={a.name}
@@ -115,50 +118,48 @@ export default function SettingsPage() {
             )}
           </For>
         </div>
-      </SettingsCard>
+      </Section>
 
       {/* Skin */}
-      <SettingsCard icon={Paintbrush} title="Skin">
-        <p class="text-base mb-8 text-white/40">Pick a theme for the interface</p>
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <Section icon={Paintbrush} title="Skin" desc="Pick a theme for the interface">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
           <For each={SKINS}>
             {(s) => (
               <button
-                class="p-6 rounded-2xl text-left transition-all duration-200 hover:scale-[1.02]"
+                class="p-4 rounded-xl text-left transition-all duration-200 hover:scale-[1.02]"
                 style={{
                   background: skin() === s.id ? 'var(--accent)' : s.surface,
                   border: skin() === s.id ? 'none' : '1px solid rgba(255,255,255,0.06)',
-                  'box-shadow': skin() === s.id ? '0 6px 24px var(--accent-glow)' : '0 4px 12px rgba(0,0,0,0.2)',
+                  'box-shadow': skin() === s.id ? '0 4px 16px var(--accent-glow)' : '0 2px 8px rgba(0,0,0,0.2)',
                 }}
                 onClick={() => { setSkinState(s.id); applySkin(s.id); }}
               >
-                <div class="flex gap-2.5 mb-4">
-                  <div class="w-7 h-7 rounded-lg" style={{ background: s.bg }} />
-                  <div class="w-7 h-7 rounded-lg" style={{ background: s.surface }} />
-                  <div class="w-5 h-7 rounded-lg" style={{ background: skin() === s.id ? 'rgba(255,255,255,0.3)' : 'var(--accent)' }} />
+                <div class="flex gap-2 mb-3">
+                  <div class="w-5 h-5 rounded-md" style={{ background: s.bg }} />
+                  <div class="w-5 h-5 rounded-md" style={{ background: s.surface }} />
+                  <div class="w-4 h-5 rounded-md" style={{ background: skin() === s.id ? 'rgba(255,255,255,0.3)' : 'var(--accent)' }} />
                 </div>
-                <span class="text-base font-bold" style={{ color: skin() === s.id ? 'white' : 'var(--text)' }}>
+                <span class="text-sm font-bold" style={{ color: skin() === s.id ? 'white' : 'var(--text)' }}>
                   {s.name}
                 </span>
               </button>
             )}
           </For>
         </div>
-      </SettingsCard>
+      </Section>
 
       {/* Streaming Source */}
-      <SettingsCard icon={Globe} title="Streaming Source">
-        <p class="text-base mb-8 text-white/40">Choose which source to use first</p>
-        <div class="flex gap-3 flex-wrap">
+      <Section icon={Globe} title="Streaming Source" desc="Choose which source to use first">
+        <div class="flex gap-2 flex-wrap">
           <For each={SOURCES}>
             {(s) => (
               <button
-                class="px-8 py-4 rounded-xl text-lg font-semibold transition-all duration-200 hover:scale-[1.03]"
+                class="px-5 py-2 rounded-lg text-sm font-semibold transition-all duration-200"
                 style={{
                   background: source() === s.id ? 'var(--accent)' : 'rgba(255,255,255,0.06)',
                   color: source() === s.id ? 'white' : 'var(--text)',
                   border: source() === s.id ? 'none' : '1px solid rgba(255,255,255,0.08)',
-                  'box-shadow': source() === s.id ? '0 6px 24px var(--accent-glow)' : 'none',
+                  'box-shadow': source() === s.id ? '0 2px 12px var(--accent-glow)' : 'none',
                 }}
                 onClick={() => { setSourceState(s.id); setActiveSource(s.id); }}
               >
@@ -167,65 +168,65 @@ export default function SettingsPage() {
             )}
           </For>
         </div>
-      </SettingsCard>
+      </Section>
 
       {/* Player */}
-      <SettingsCard icon={MonitorPlay} title="Player">
-        <div class="flex items-center justify-between">
+      <Section icon={MonitorPlay} title="Player">
+        <div class="glass-card p-4 flex items-center justify-between">
           <div>
-            <p class="text-lg font-semibold text-white">Autoplay next episode</p>
-            <p class="text-base text-white/40 mt-1.5">Play the next episode automatically</p>
+            <p class="text-sm font-semibold text-white">Autoplay next episode</p>
+            <p class="text-xs text-white/35 mt-1">Play the next episode automatically</p>
           </div>
           <button
-            class="w-16 h-9 rounded-full transition-all duration-200 relative shrink-0"
+            class="w-12 h-7 rounded-full transition-all duration-200 relative shrink-0"
             style={{
               background: autoplay() ? 'var(--accent)' : 'rgba(255,255,255,0.12)',
-              'box-shadow': autoplay() ? '0 2px 16px var(--accent-glow)' : 'none',
+              'box-shadow': autoplay() ? '0 2px 12px var(--accent-glow)' : 'none',
             }}
             onClick={() => { const v = !autoplay(); setAutoplayState(v); setAutoplayNext(v); }}
           >
             <div
-              class="w-7 h-7 rounded-full bg-white absolute top-1 transition-transform duration-200 shadow-md"
-              style={{ left: autoplay() ? '32px' : '4px' }}
+              class="w-5 h-5 rounded-full bg-white absolute top-1 transition-transform duration-200 shadow-md"
+              style={{ left: autoplay() ? '26px' : '4px' }}
             />
           </button>
         </div>
-      </SettingsCard>
+      </Section>
 
       {/* Data */}
-      <SettingsCard icon={Info} title="Data">
-        <div class="flex items-center justify-between">
+      <Section icon={Trash2} title="Data">
+        <div class="glass-card p-4 flex items-center justify-between">
           <div>
-            <p class="text-lg font-semibold text-white">Clear Continue Watching</p>
-            <p class="text-base text-white/40 mt-1.5">Remove all continue watching entries</p>
+            <p class="text-sm font-semibold text-white">Clear Continue Watching</p>
+            <p class="text-xs text-white/35 mt-1">Remove all continue watching entries</p>
           </div>
           <button
-            class="px-7 py-3.5 rounded-xl text-base font-bold transition-all hover:brightness-110 shrink-0"
+            class="px-4 py-2 rounded-lg text-sm font-bold transition-all hover:brightness-110 shrink-0"
             style={{
-              background: 'rgba(239, 68, 68, 0.15)',
+              background: 'rgba(239, 68, 68, 0.12)',
               color: '#ef4444',
-              border: '1px solid rgba(239, 68, 68, 0.2)',
+              border: '1px solid rgba(239, 68, 68, 0.15)',
             }}
             onClick={() => { clearAllContinueWatching(); }}
           >
-            Clear All
+            Clear
           </button>
         </div>
-      </SettingsCard>
+      </Section>
 
       {/* About */}
-      <SettingsCard icon={Sparkles} title="About">
-        <div class="flex items-center justify-between">
+      <Section icon={Sparkles} title="About">
+        <div class="glass-card p-4 flex items-center justify-between">
           <div>
-            <p class="text-lg font-bold text-white">Tagflix v2.0</p>
-            <p class="text-base text-white/40 mt-1.5">SolidJS + Capacitor</p>
+            <p class="text-sm font-bold text-white">Tagflix v2.0</p>
+            <p class="text-xs text-white/35 mt-1">SolidJS • Built for streaming</p>
           </div>
-          <div class="flex items-center gap-2 px-5 py-2.5 rounded-xl glass shrink-0">
-            <Sparkles size={16} style={{ color: 'var(--accent)' }} />
-            <span class="text-sm font-bold" style={{ color: 'var(--accent)' }}>OPEN SOURCE</span>
+          <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg glass shrink-0">
+            <Sparkles size={12} style={{ color: 'var(--accent)' }} />
+            <span class="text-[11px] font-bold" style={{ color: 'var(--accent)' }}>OPEN SOURCE</span>
           </div>
         </div>
-      </SettingsCard>
+      </Section>
     </div>
   );
 }

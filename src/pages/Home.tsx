@@ -89,18 +89,18 @@ function HeroCarousel(props: { items: TMDBMedia[] }) {
                 {item.overview}
               </p>
 
-              <div class="flex items-center gap-4">
+              <div class="flex items-center gap-3">
                 <button
-                  class="btn-primary"
+                  class="btn-primary btn-sm"
                   onClick={() => navigate(`/${type(item)}/${item.id}`)}
                 >
-                  <Play size={22} fill="white" /> Watch Now
+                  <Play size={16} fill="white" /> Watch Now
                 </button>
                 <button
-                  class="btn-secondary"
+                  class="btn-secondary btn-sm"
                   onClick={() => navigate(`/${type(item)}/${item.id}`)}
                 >
-                  <Info size={20} /> More Info
+                  <Info size={16} /> More Info
                 </button>
               </div>
             </div>
