@@ -1,59 +1,122 @@
-Unlike Error 300 (which is a browser/video player media decoding failure), an Error 500 (Internal Server Error) is a backend response.  When VidCore returns a 500 status code while loading inside Electron, it means their edge servers are explicitly rejecting the request or throwing an unhandled exception because your Electron session is sending header combinations that crash their backend routing logic.Why VidCore Throws a 500 Error in ElectronHeader Conflict / Missing Parameters: In the previous performance tweak, setting access-control-allow-origin: * or forcing custom CORS headers combined with your Referer override causes VidCore's backend API (e.g., api/source/...) to reject the dynamic handshake.  Missing Cookie Context: VidCore requires initial session tokens/cookies generated on request initialization. Stripping headers or separating Origin from Referer breaks the server-side session validator.Third-Party Storage Partitioning: Modern Chromium (and Electron) uses State Partitioning. VidCore's iframe can't read its own storage keys across cross-origin boundaries, leading to an uncaught script error on their server.The Fix: Clean Session & Selective Header ProxyDo not inject broad wildcard CORS headers into the server's response. Instead, match only the request headers VidCore expects from a standard Chrome browser.Update your Electron main process session handler (main.ts):TypeScript// main.ts
-import { app, BrowserWindow, session } from 'electron';
+To package this into a clean executable for end users without them needing to install Node.js or run terminal commands, you can use Pkg (or Electron-Builder with your local server approach).
 
-function createWindow() {
-  const mainWindow = new BrowserWindow({
-    width: 1280,
-    height: 720,
-    webPreferences: {
-      nodeIntegration: false,
-      contextIsolation: true,
-      webSecurity: true, // Keep enabled so standard cookie & storage rules work
-      partition: 'persist:vidcore_session', // Persists storage state to pass token checks
-    },
-  });
+Packaging a local Express server + an auto-launcher into a single .exe file gives users a double-clickable app experience.
 
-  const chromeUserAgent =
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
+Step 1: Install pkg
+Install pkg as a development dependency:
 
-  // 1. Force a real Chrome User-Agent across all sub-requests
-  session.defaultSession.setUserAgent(chromeUserAgent);
+Bash
+npm install -D pkg
+Step 2: Configure package.json
+Add a pkg section to your package.json to include your dist folder and static assets in the final binary bundle:
 
-  // 2. Clear old broken response handlers and ONLY tweak request headers for VidCore
-  session.defaultSession.webRequest.onBeforeSendHeaders(
-    { urls: ['*://*.vidcore.*/*', '*://*.vidking.*/*'] },
-    (details, callback) => {
-      const headers = { ...details.requestHeaders };
-
-      headers['User-Agent'] = chromeUserAgent;
-      headers['Referer'] = 'https://vidcore.io/';
-      headers['Origin'] = 'https://vidcore.io/';
-      
-      // Ensure Sec-Fetch headers match standard Chrome iframe requests
-      headers['Sec-Fetch-Dest'] = 'iframe';
-      headers['Sec-Fetch-Mode'] = 'navigate';
-      headers['Sec-Fetch-Site'] = 'cross-site';
-
-      callback({ requestHeaders: headers });
-    }
-  );
-
-  // 3. DO NOT use onHeadersReceived to inject access-control-allow-origin wildcard!
-  // Allowing default browser headers prevents VidCore server 500 exceptions.
-
-  mainWindow.loadURL('http://localhost:3000');
+JSON
+{
+  "name": "tagflix",
+  "version": "1.0.0",
+  "main": "server.cjs",
+  "scripts": {
+    "build": "vite build",
+    "package": "pkg . --targets node18-win-x64,node18-macos-x64,node18-linux-x64 --out-path dist-app"
+  },
+  "pkg": {
+    "assets": [
+      "dist/**/*"
+    ],
+    "targets": [
+      "node18-win-x64"
+    ],
+    "outputPath": "dist-app"
+  }
 }
-React <iframe /> AdjustmentsEnsure your iframe allows credentialed state and doesn't restrict storage access:TypeScriptexport const VidCorePlayer = ({ embedUrl }: { embedUrl: string }) => {
-  return (
-    <div className="w-full h-full bg-black">
-      <iframe
-        src={embedUrl}
-        className="w-full h-full border-0"
-        allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
-        // Ensure allow-same-origin and allow-scripts are active
-        sandbox="allow-forms allow-modals allow-orientation-lock allow-pointer-lock allow-popups allow-same-origin allow-scripts allow-top-navigation-by-user-activation"
-      />
-    </div>
-  );
-};
-Quick VerificationRemove any session.defaultSession.webRequest.onHeadersReceived logic from your project.Clear your Electron app cache (app.clearCache()) or restart the app process to clear broken 500-error session tokens.Open DevTools (Network tab) inside Electron to confirm that requests to vidcore.io return 200 OK rather than 500 Internal Server Error.
+Step 3: Adjust server.cjs for Executable Paths
+When your server runs inside a compiled pkg executable, standard relative paths like __dirname point inside a virtual filesystem (/snapshot/...). Adjust the pathing logic slightly in your server.cjs:
+
+JavaScript
+const express = require('express');
+const path = require('path');
+const fs = require('fs');
+const open = require('open');
+const { execSync } = require('child_process');
+
+const app = express();
+const PORT = 5173;
+
+// Resolve path properly whether running via Node or as a compiled pkg binary
+const isPkg = typeof process.pkg !== 'undefined';
+const baseDir = isPkg ? path.dirname(process.execPath) : __dirname;
+const distDir = isPkg 
+  ? path.join(__dirname, 'dist') // Embed inside pkg virtual snapshot
+  : path.join(__dirname, 'dist');
+
+app.use(express.static(distDir));
+
+app.get('*', (req, res) => {
+  const indexFile = path.join(distDir, 'index.html');
+  res.sendFile(indexFile);
+});
+
+function getPreferredAppBrowser() {
+  const platform = process.platform;
+
+  if (platform === 'win32') {
+    const edgePaths = [
+      process.env['PROGRAMFILES(X86)'] + '\\Microsoft\\Edge\\Application\\msedge.exe',
+      process.env['PROGRAMFILES'] + '\\Microsoft\\Edge\\Application\\msedge.exe',
+    ];
+    if (edgePaths.some(p => fs.existsSync(p))) return 'msedge';
+
+    const chromePaths = [
+      process.env['PROGRAMFILES(X86)'] + '\\Google\\Chrome\\Application\\chrome.exe',
+      process.env['PROGRAMFILES'] + '\\Google\\Chrome\\Application\\chrome.exe',
+      process.env['LOCALAPPDATA'] + '\\Google\\Chrome\\Application\\chrome.exe',
+    ];
+    if (chromePaths.some(p => fs.existsSync(p))) return 'google chrome';
+  } else if (platform === 'darwin') {
+    if (fs.existsSync('/Applications/Microsoft Edge.app')) return 'microsoft edge';
+    if (fs.existsSync('/Applications/Google Chrome.app')) return 'google chrome';
+  }
+
+  return null;
+}
+
+app.listen(PORT, '127.0.0.1', async () => {
+  const targetUrl = `http://127.0.0.1:${PORT}`;
+  console.log(`[tagflix] App active at ${targetUrl}`);
+
+  const detectedBrowser = getPreferredAppBrowser();
+
+  try {
+    if (detectedBrowser) {
+      await open(targetUrl, {
+        app: {
+          name: open.apps[detectedBrowser] || detectedBrowser,
+          arguments: [`--app=${targetUrl}`],
+        },
+      });
+    } else {
+      await open(targetUrl);
+    }
+  } catch (err) {
+    console.error('Browser launch error:', err);
+  }
+});
+Step 4: Build and Distribute
+Run the following commands:
+
+Build your frontend production bundle:
+
+Bash
+npm run build
+Package the app into a standalone binary:
+
+Bash
+npx pkg .
+You will get a single standalone executable file (e.g., tagflix.exe in the dist-app folder).
+
+End User Experience
+No Prerequisites Required: The user does not need Node.js, npm, or any code dependencies installed.
+
+One-Click Launch: The user simply double-clicks tagflix.exe.
+
+Seamless Experience: It boots the embedded local server silently, detects Edge/Chrome on their computer, and opens your app directly in frameless App Mode without CORS or stream playback 500/502 issues.

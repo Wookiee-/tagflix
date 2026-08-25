@@ -243,7 +243,7 @@ export default function SettingsPage() {
         <div class="flex items-center justify-between">
           <div>
             <p class="text-base font-bold" style={{ color: 'white' }}>Tagflix v2.0</p>
-            <p class="text-sm opacity-40 mt-1">SolidJS + Electron + Capacitor</p>
+            <p class="text-sm opacity-40 mt-1">SolidJS + Capacitor</p>
           </div>
           <div class="flex items-center gap-2 px-4 py-2 rounded-xl glass shrink-0">
             <Sparkles size={14} style={{ color: 'var(--accent)' }} />

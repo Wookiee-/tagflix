@@ -1,6 +1,6 @@
 # Tagflix
 
-An open-source media aggregator built with **SolidJS + TypeScript + Electron**.
+An open-source media aggregator built with **SolidJS + TypeScript**.
 
 ![Tagflix](https://img.shields.io/badge/Tagflix-v2.0-blue) ![License](https://img.shields.io/badge/License-MIT-green) ![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Mac%20%7C%20Linux%20%7C%20Android-brightgreen)
 
@@ -10,7 +10,7 @@ An open-source media aggregator built with **SolidJS + TypeScript + Electron**.
 |-------|-----------|--------|
 | UI | SolidJS + TypeScript | All platforms |
 | Styling | Tailwind CSS v4 | All platforms |
-| Desktop | Electron | Windows / Mac / Linux |
+| Desktop | Native browser `--app` mode | Windows / Mac / Linux |
 | Mobile & TV | Capacitor v6+ | Android APK / Fire OS |
 
 ## Features
@@ -19,8 +19,6 @@ An open-source media aggregator built with **SolidJS + TypeScript + Electron**.
 - **Embedded iframe players** — no proxy server needed
 - **Multiple streaming sources** — VidCore, VidKing (add more in `src/lib/sources.ts`)
 - **Season/episode browser** — rich episode cards with thumbnails and ratings
-- **Built-in ad blocker** — blocks 50+ ad/tracking domains at the network level
-- **GPU hardware acceleration** — smooth 60fps video seeking via Chromium GPU flags
 - **Continue watching** — tracks your progress across movies and TV shows
 - **Favourites / library** — save content for later
 - **Customizable themes** — 4 skins + 8 accent colours
@@ -36,15 +34,22 @@ npm install
 # Dev server (Vite)
 npm run dev
 
-# Dev with Electron (one command)
-npm run electron:dev
+# Build & launch as standalone app window
+npm run start
 
-# Build for production
+# Build only
 npm run build
-
-# Package Electron app (installer + portable)
-npm run electron:build
 ```
+
+### How `npm start` works
+
+`npm run build && node server.cjs` does three things:
+
+1. Builds the frontend into `dist/`
+2. Starts a local Express server on `127.0.0.1:5173`
+3. Detects Edge / Chrome / Brave and opens the app in `--app` mode
+
+`--app` mode opens the browser as a **standalone window** (no address bar, no tabs) — looks like a native app but runs as a real Chromium browser. Streaming sources work natively with no sandbox detection or CORS issues.
 
 ## Project Structure
 
@@ -68,22 +73,8 @@ src/
     TVShows.tsx         # Browse TV shows
     Favourites.tsx      # Saved library
     Settings.tsx        # Theme, accent, source settings
-electron/
-  main.cjs             # Electron main process (GPU accel, ad blocker, stealth)
-  preload.cjs          # Preload script (hides Electron markers)
+server.cjs             # Local server + browser launcher (--app mode)
 ```
-
-## Electron Optimizations
-
-The Electron build includes several performance and security fixes:
-
-| Feature | Description |
-|---------|-------------|
-| **GPU Acceleration** | Forces H.264/HEVC decoding to the graphics card via Chromium flags |
-| **Secure CORS** | Uses `onHeadersReceived` injection instead of disabling `webSecurity` |
-| **Ad Blocker** | Network-level blocking of 50+ ad/tracking/cryptominer domains |
-| **Stealth Mode** | UA spoofing, webdriver hiding, Referer injection for embeds |
-| **Background Throttling** | Reduces CPU usage when app is idle |
 
 ## Embed Sources
 
