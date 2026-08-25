@@ -68,6 +68,11 @@ server.listen(PORT, '127.0.0.1', () => {
         '--window-size=1280,720',
         '--window-position=0,0',
         `--user-data-dir=${profileDir}`,
+        '--no-first-run',
+        '--disable-sync',
+        '--disable-sync-preferences',
+        '--no-default-browser-check',
+        '--disable-features=msEdgeEnableSync',
       ], { detached: true, stdio: 'ignore' });
 
       browser.unref();
