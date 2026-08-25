@@ -57,45 +57,47 @@ function findBrowserPath() {
   return null;
 }
 
-function waitForServer(url, cb, retries) {
-  retries = retries || 0;
-  http.get(url, function (res) {
-    res.resume();
-    cb();
-  }).on('error', function () {
-    if (retries > 30) { cb(); return; } // 3 seconds max
-    setTimeout(function () { waitForServer(url, cb, retries + 1); }, 100);
-  });
-}
-
+// Phase 1: Start the server and confirm it's listening
 server.listen(PORT, '127.0.0.1', function () {
   var targetUrl = 'http://127.0.0.1:' + PORT;
-  var browserPath = findBrowserPath();
 
-  if (browserPath) {
-    // Wait for server to be ready, then give Edge extra time to init profile
-    waitForServer(targetUrl, function () {
-      setTimeout(function () {
-        var profileDir = path.join(os.tmpdir(), 'tagflix-browser');
-        var browser = spawn(browserPath, [
-          '--app=' + targetUrl,
-          '--window-size=1280,720',
-          '--window-position=0,0',
-          '--user-data-dir=' + profileDir,
-          '--no-first-run',
-          '--disable-sync',
-          '--disable-sync-preferences',
-          '--no-default-browser-check',
-          '--disable-features=msEdgeEnableSync',
-        ], { detached: true, stdio: 'ignore' });
-
-        browser.unref();
-        browser.on('close', function () { process.exit(0); });
-        browser.on('error', function () { process.exit(1); });
-      }, 2000); // extra 2s for Edge profile init
+  // Phase 2: Self-test — actually fetch the page to confirm it serves content
+  var testReq = http.get(targetUrl, function (testRes) {
+    testRes.resume();
+    if (testRes.statusCode === 200) {
+      // Phase 3: Server is 100% ready — now launch browser
+      launchBrowser(targetUrl);
+    } else {
+      // Retry after 500ms
+      setTimeout(function () { launchBrowser(targetUrl); }, 500);
+    }
+    testReq.on('error', function () {
+      setTimeout(function () { launchBrowser(targetUrl); }, 1000);
     });
-  }
+  });
 });
+
+function launchBrowser(url) {
+  var browserPath = findBrowserPath();
+  if (!browserPath) return;
+
+  var profileDir = path.join(os.tmpdir(), 'tagflix-browser');
+  var browser = spawn(browserPath, [
+    '--app=' + url,
+    '--window-size=1280,720',
+    '--window-position=0,0',
+    '--user-data-dir=' + profileDir,
+    '--no-first-run',
+    '--disable-sync',
+    '--disable-sync-preferences',
+    '--no-default-browser-check',
+    '--disable-features=msEdgeEnableSync',
+  ], { detached: true, stdio: 'ignore' });
+
+  browser.unref();
+  browser.on('close', function () { process.exit(0); });
+  browser.on('error', function () { process.exit(1); });
+}
 
 process.on('SIGINT', function () { process.exit(0); });
 process.on('SIGHUP', function () { process.exit(0); });
