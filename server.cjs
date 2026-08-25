@@ -1,12 +1,17 @@
 const http = require('http');
 const path = require('path');
 const fs = require('fs');
-const { spawn, execSync } = require('child_process');
+const { spawn, exec } = require('child_process');
+const os = require('os');
 
-// Hide console window on Windows (pkg creates console-mode exe)
+// Hide console window instantly using FreeConsole (no PowerShell delay)
 if (process.platform === 'win32') {
   try {
-    execSync('powershell -NoProfile -WindowStyle Hidden -Command "Add-Type \"using System; using System.Runtime.InteropServices; public class Win { [DllImport(\\\"kernel32.dll\\\")\\] public static extern IntPtr GetConsoleWindow(); [DllImport(\\\"user32.dll\\\")\\] public static extern bool ShowWindow(IntPtr h, int c); }\" ; [Win]::ShowWindow([Win]::GetConsoleWindow(), 0)"', { stdio: 'ignore' });
+    exec(
+      'powershell -NoProfile -Command "Add-Type \'using System; using System.Runtime.InteropServices; public class C { [DllImport(\\"kernel32.dll\\")] public static extern bool FreeConsole(); }\' ; [C]::FreeConsole()"',
+      { windowsHide: true },
+      function () {}
+    );
   } catch (e) {}
 }
 
@@ -46,14 +51,20 @@ function openBrowser(url) {
   var browserPath = findBrowserPath();
   if (!browserPath) return;
 
+  // Use --user-data-dir to force a separate Edge instance that
+  // respects --window-size. Without this, Edge absorbs flags into
+  // the existing instance when it's already running.
+  var profileDir = path.join(os.tmpdir(), 'tagflix-browser');
+
   var browser = spawn(browserPath, [
     '--app=' + url,
-    '--new-window',
     '--window-size=1280,720',
     '--window-position=0,0',
+    '--user-data-dir=' + profileDir,
     '--no-first-run',
+    '--disable-sync',
     '--no-default-browser-check',
-  ], { detached: true, stdio: 'ignore' });
+  ], { detached: true, stdio: 'ignore', windowsHide: true });
 
   browser.unref();
 }
@@ -64,7 +75,6 @@ function startServer() {
   // Check if server is already running
   http.get(targetUrl, function (res) {
     res.resume();
-    // Server already running — just open a new tab
     openBrowser(targetUrl);
   }).on('error', function () {
     // Server not running — start it
@@ -96,7 +106,6 @@ function startServer() {
     });
 
     server.listen(PORT, '127.0.0.1', function () {
-      // Wait for server to be fully ready, then open browser
       var retries = 0;
       function checkReady() {
         http.get(targetUrl, function (res) {
