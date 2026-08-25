@@ -2,6 +2,7 @@ const http = require('http');
 const path = require('path');
 const fs = require('fs');
 const { spawn, execSync } = require('child_process');
+const os = require('os');
 
 const PORT = process.env.PORT || 5173;
 
@@ -77,14 +78,18 @@ server.listen(PORT, '127.0.0.1', () => {
   const browserPath = findBrowserPath();
 
   if (browserPath) {
-    log(`[tagflix] launching ${browserPath}...`);
+    // Separate user-data-dir forces a new Edge instance that respects
+    // --app and --window-size. Without this, Edge absorbs into the
+    // existing instance and ignores window flags.
+    const profileDir = path.join(os.tmpdir(), 'tagflix-browser');
+    log(`[tagflix] launching ${browserPath} (profile: ${profileDir})...`);
 
     setTimeout(() => {
       const browser = spawn(browserPath, [
         `--app=${targetUrl}`,
-        '--new-window',
         '--window-size=1280,720',
         '--window-position=0,0',
+        `--user-data-dir=${profileDir}`,
       ], { detached: true, stdio: 'ignore' });
 
       log(`[tagflix] browser pid=${browser.pid}`);
