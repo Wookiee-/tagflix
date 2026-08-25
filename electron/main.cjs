@@ -49,6 +49,12 @@ function createWindow() {
   mainWindow.setMenuBarVisibility(false);
   mainWindow.webContents.setUserAgent(CHROME_UA);
 
+  // BLOCK POPUP ADS: Silently deny all window.open() from iframes.
+  // Without sandbox, VidCore can trigger ad redirects via window.open().
+  mainWindow.webContents.setWindowOpenHandler(() => {
+    return { action: 'deny' };
+  });
+
   if (isDev) {
     mainWindow.loadURL('http://localhost:5173');
     mainWindow.webContents.openDevTools({ mode: 'detach' });
