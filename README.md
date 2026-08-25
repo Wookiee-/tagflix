@@ -37,9 +37,13 @@ npm run dev
 # Build & launch as standalone app window
 npm run start
 
-# Build only
-npm run build
+# Build standalone .exe (no Node.js required for end users)
+npm run package
 ```
+
+### Packaging for distribution
+
+`npm run package` builds the frontend and compiles everything into a single `dist-app/tagflix.exe`. Ship the `dist-app/` folder — end users just double-click `tagflix.exe` (no Node.js required).
 
 ### How `npm start` works
 

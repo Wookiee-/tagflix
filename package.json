@@ -4,16 +4,30 @@
   "version": "2.0.0",
   "description": "An open-source media aggregator.",
   "author": "TagFlix",
+  "main": "server.cjs",
+  "bin": {
+    "tagflix": "server.cjs"
+  },
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
     "start": "node server.cjs",
+    "package": "vite build && pkg . --targets node18-win-x64 --out-path dist-app && cp -r dist dist-app/dist",
     "cap:init": "npx cap init tagflix com.tagflix.app --web-dir dist",
     "cap:add": "npx cap add android",
     "cap:sync": "npx cap sync",
     "cap:build": "vite build && npx cap sync && npx cap open android"
+  },
+  "pkg": {
+    "assets": [
+      "dist/**/*"
+    ],
+    "targets": [
+      "node18-win-x64"
+    ],
+    "outputPath": "dist-app"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.0",
@@ -23,12 +37,13 @@
     "@tailwindcss/vite": "^4.3.3",
     "express": "^4.21.2",
     "lucide-solid": "^1.33.0",
-    "open": "^10.1.0",
+    "open": "^8.4.2",
     "solid-js": "^1.9.14",
     "tailwindcss": "^4.3.3"
   },
   "devDependencies": {
     "@types/node": "^24.13.3",
+    "pkg": "^5.8.1",
     "typescript": "~6.0.2",
     "vite": "^8.2.0",
     "vite-plugin-solid": "^2.11.13"

@@ -6,7 +6,12 @@ const { execSync } = require('child_process');
 
 const app = express();
 const PORT = process.env.PORT || 5173;
-const distDir = path.join(__dirname, 'dist');
+
+// Resolve paths for both normal Node and compiled pkg binary
+const isPkg = typeof process.pkg !== 'undefined';
+const distDir = isPkg
+  ? path.join(path.dirname(process.execPath), 'dist')
+  : path.join(__dirname, 'dist');
 
 // Serve static frontend build
 app.use(express.static(distDir));

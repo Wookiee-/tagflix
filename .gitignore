@@ -1,12 +1,11 @@
 node_modules/
 dist/
+dist-app/
 release/
 android/
 ios/
 .env
 *.log
-
-# Electron
 thumbs.db
 
 
