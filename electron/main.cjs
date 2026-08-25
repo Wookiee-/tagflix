@@ -88,12 +88,13 @@ app.whenReady().then(async () => {
 
   createWindow();
 
-  // 1. Inject Referer header strictly for VidCore requests
+  // 1. Inject Referer + Origin for VidCore requests (including sub-resources)
   session.defaultSession.webRequest.onBeforeSendHeaders(
-    { urls: ['*://*.vidcore.io/*'] },
+    { urls: ['*://*.vidcore.io/*', '*://vidcore.io/*'] },
     (details, callback) => {
       const headers = { ...details.requestHeaders };
       headers['Referer'] = 'https://vidcore.io/';
+      headers['Origin'] = 'https://vidcore.io';
       callback({ requestHeaders: headers });
     }
   );
