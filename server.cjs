@@ -1,16 +1,15 @@
 const http = require('http');
 const path = require('path');
 const fs = require('fs');
-const { spawn, exec } = require('child_process');
+const { spawn, execSync } = require('child_process');
 const os = require('os');
 
-// Hide console window instantly using FreeConsole (no PowerShell delay)
+// Hide console window instantly — blocking so it's gone before anything else
 if (process.platform === 'win32') {
   try {
-    exec(
+    execSync(
       'powershell -NoProfile -Command "Add-Type \'using System; using System.Runtime.InteropServices; public class C { [DllImport(\\"kernel32.dll\\")] public static extern bool FreeConsole(); }\' ; [C]::FreeConsole()"',
-      { windowsHide: true },
-      function () {}
+      { windowsHide: true, timeout: 3000 }
     );
   } catch (e) {}
 }
@@ -51,10 +50,8 @@ function openBrowser(url) {
   var browserPath = findBrowserPath();
   if (!browserPath) return;
 
-  // Use --user-data-dir to force a separate Edge instance that
-  // respects --window-size. Without this, Edge absorbs flags into
-  // the existing instance when it's already running.
-  var profileDir = path.join(os.tmpdir(), 'tagflix-browser');
+  // Persistent profile dir — Edge reuses cache, no first-run page
+  var profileDir = path.join(os.homedir(), '.tagflix', 'browser-profile');
 
   var browser = spawn(browserPath, [
     '--app=' + url,
@@ -62,6 +59,7 @@ function openBrowser(url) {
     '--window-position=0,0',
     '--user-data-dir=' + profileDir,
     '--no-first-run',
+    '--disable-features=msEdgeFirstRunExperience,msEdgeWelcomePage',
     '--disable-sync',
     '--no-default-browser-check',
   ], { detached: true, stdio: 'ignore', windowsHide: true });
