@@ -59,6 +59,16 @@ function findBrowserPath() {
   return null;
 }
 
+function waitForServer(url, cb, retries = 0) {
+  http.get(url, (res) => {
+    res.resume();
+    cb();
+  }).on('error', () => {
+    if (retries > 20) { cb(); return; }
+    setTimeout(() => waitForServer(url, cb, retries + 1), 100);
+  });
+}
+
 server.listen(PORT, '127.0.0.1', () => {
   const targetUrl = `http://127.0.0.1:${PORT}`;
   const browserPath = findBrowserPath();
@@ -66,7 +76,8 @@ server.listen(PORT, '127.0.0.1', () => {
   if (browserPath) {
     const profileDir = path.join(os.tmpdir(), 'tagflix-browser');
 
-    setTimeout(() => {
+    // Wait until server is actually responding before launching browser
+    waitForServer(targetUrl, () => {
       const browser = spawn(browserPath, [
         `--app=${targetUrl}`,
         '--window-size=1280,720',
@@ -89,7 +100,7 @@ server.listen(PORT, '127.0.0.1', () => {
       browser.on('error', () => {
         process.exit(1);
       });
-    }, 500);
+    });
   }
 });
 
