@@ -41,7 +41,7 @@ function createWindow() {
       allowRunningInsecureContent: false,
       experimentalFeatures: true,
       backgroundThrottling: true,
-      partition: 'persist:vidcore_session',
+      partition: 'persist:tagflix',
       preload: path.join(__dirname, 'preload.cjs'),
     },
   });
@@ -124,6 +124,7 @@ function createWindow() {
 app.whenReady().then(() => {
   session.defaultSession.setUserAgent(CHROME_UA);
   session.defaultSession.clearCache().catch(() => {});
+  session.defaultSession.clearStorageData().catch(() => {});
 
   session.defaultSession.registerPreloadScript({
     filePath: path.join(__dirname, 'preload.cjs'),
@@ -152,29 +153,40 @@ app.whenReady().then(() => {
 
   // 4. Inject request headers to match standard Chrome iframe requests.
   //    Sec-Fetch-* headers are critical — VidCore's backend checks them.
+  // Target ONLY vidcore.io — strip localhost traces completely
+  const vidcoreFilter = { urls: ['*://*.vidcore.io/*'] };
+
+  session.defaultSession.webRequest.onBeforeSendHeaders(vidcoreFilter, (details, callback) => {
+    const headers = { ...details.requestHeaders };
+
+    // Hardcode headers to match standard Chrome iframe behavior
+    headers['User-Agent'] = CHROME_UA;
+    headers['Referer'] = 'https://vidcore.io/';
+    headers['Origin'] = 'https://vidcore.io';
+
+    // Clear Electron's internal localhost flags on API sub-requests
+    delete headers['X-Requested-With'];
+
+    // Match standard Chrome iframe request fingerprint
+    headers['Sec-Fetch-Dest'] = 'iframe';
+    headers['Sec-Fetch-Mode'] = 'navigate';
+    headers['Sec-Fetch-Site'] = 'cross-site';
+
+    callback({ requestHeaders: headers });
+  });
+
+  // VidKing headers (separate filter)
   session.defaultSession.webRequest.onBeforeSendHeaders(
-    { urls: ['*://*.vidcore.io/*', '*://*.vidking.net/*'] },
+    { urls: ['*://*.vidking.net/*'] },
     (details, callback) => {
-      const url = details.url;
       const headers = { ...details.requestHeaders };
-
       headers['User-Agent'] = CHROME_UA;
-      headers['Accept-Language'] = 'en-US,en;q=0.9';
-
-      if (url.includes('vidcore.io')) {
-        headers['Referer'] = 'https://vidcore.io/';
-        headers['Origin'] = 'https://vidcore.io';
-      } else if (url.includes('vidking.net')) {
-        headers['Referer'] = 'https://www.vidking.net/';
-        headers['Origin'] = 'https://www.vidking.net';
-      }
-
-      // Match standard Chrome iframe request fingerprint
+      headers['Referer'] = 'https://www.vidking.net/';
+      headers['Origin'] = 'https://www.vidking.net';
+      delete headers['X-Requested-With'];
       headers['Sec-Fetch-Dest'] = 'iframe';
       headers['Sec-Fetch-Mode'] = 'navigate';
       headers['Sec-Fetch-Site'] = 'cross-site';
-      headers['Sec-Fetch-User'] = '?1';
-
       callback({ requestHeaders: headers });
     }
   );
