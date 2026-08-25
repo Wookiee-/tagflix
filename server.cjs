@@ -5,6 +5,7 @@ const { spawn, execSync } = require('child_process');
 const os = require('os');
 
 const PORT = 5173;
+var lastRequestTime = Date.now();
 
 const isPkg = typeof process.pkg !== 'undefined';
 const distDir = isPkg
@@ -19,12 +20,19 @@ const MIME = {
   '.ttf': 'font/ttf', '.ico': 'image/x-icon',
 };
 
+// ─── Idle checker: exit after 30s of no requests ───
+function checkIdle() {
+  if (Date.now() - lastRequestTime > 30000) {
+    process.exit(0);
+  }
+  setTimeout(checkIdle, 3000);
+}
+
 function findBrowser() {
   var platform = process.platform;
 
   if (platform === 'win32') {
     var candidates = [
-      // Chromium-based (priority order)
       { path: path.join(process.env['PROGRAMFILES(X86)'] || '', 'Microsoft', 'Edge', 'Application', 'msedge.exe'), name: 'edge', engine: 'chromium' },
       { path: path.join(process.env['PROGRAMFILES'] || '', 'Microsoft', 'Edge', 'Application', 'msedge.exe'), name: 'edge', engine: 'chromium' },
       { path: path.join(process.env['PROGRAMFILES(X86)'] || '', 'Google', 'Chrome', 'Application', 'chrome.exe'), name: 'chrome', engine: 'chromium' },
@@ -35,7 +43,6 @@ function findBrowser() {
       { path: path.join(process.env['LOCALAPPDATA'] || '', 'BraveSoftware', 'Brave-Browser', 'Application', 'brave.exe'), name: 'brave', engine: 'chromium' },
       { path: path.join(process.env['PROGRAMFILES(X86)'] || '', 'Vivaldi', 'Application', 'vivaldi.exe'), name: 'vivaldi', engine: 'chromium' },
       { path: path.join(process.env['PROGRAMFILES'] || '', 'Vivaldi', 'Application', 'vivaldi.exe'), name: 'vivaldi', engine: 'chromium' },
-      // Mozilla-based
       { path: path.join(process.env['PROGRAMFILES'] || '', 'Mozilla Firefox', 'firefox.exe'), name: 'firefox', engine: 'gecko' },
       { path: path.join(process.env['PROGRAMFILES(X86)'] || '', 'Mozilla Firefox', 'firefox.exe'), name: 'firefox', engine: 'gecko' },
       { path: path.join(process.env['LOCALAPPDATA'] || '', 'Mozilla Firefox', 'firefox.exe'), name: 'firefox', engine: 'gecko' },
@@ -91,13 +98,11 @@ function getBrowserArgs(browser, url) {
   var args = [];
 
   if (browser.engine === 'gecko') {
-    // Firefox / Mozilla-based: different flag syntax
     args.push('--new-instance');
     args.push('--width=1280');
     args.push('--height=720');
-    args.push(url); // Firefox uses positional URL, not --app=
+    args.push(url);
   } else {
-    // Chromium-based: standard --app mode
     args.push('--app=' + url);
     args.push('--window-size=1280,720');
     args.push('--window-position=0,0');
@@ -105,7 +110,6 @@ function getBrowserArgs(browser, url) {
     args.push('--no-default-browser-check');
     args.push('--disable-sync');
 
-    // Browser-specific first-run suppression
     if (browser.name === 'edge') {
       args.push('--disable-features=msEdgeFirstRunExperience,msEdgeWelcomePage');
     } else if (browser.name === 'chrome') {
@@ -122,18 +126,14 @@ function openBrowser(url) {
   var browser = findBrowser();
   if (!browser) return;
 
-  // Persistent profile dir per browser
   var profileDir = path.join(os.homedir(), '.tagflix', browser.name + '-profile');
-
   var args = getBrowserArgs(browser, url);
 
-  // Profile directory (Chromium uses --user-data-dir, Firefox uses -P with existing profile)
   if (browser.engine === 'gecko') {
-    // Firefox: create profile if needed, use -P to select it
-    var profilesIni = path.join(os.homedir(), '.tagflix', 'firefox-profiles.ini');
     var profilesDir = path.join(os.homedir(), '.tagflix', 'firefox-profiles');
     try {
       if (!fs.existsSync(profilesDir)) fs.mkdirSync(profilesDir, { recursive: true });
+      var profilesIni = path.join(os.homedir(), '.tagflix', 'firefox-profiles.ini');
       if (!fs.existsSync(profilesIni)) {
         fs.writeFileSync(profilesIni, '[General]\nStartWithLastProfile=0\n\n[Profile0]\nName=Tagflix\nIsRelative=1\nPath=tagflix\n');
         var tagflixProfile = path.join(profilesDir, 'tagflix');
@@ -153,58 +153,22 @@ function openBrowser(url) {
   });
 
   proc.unref();
-
-  // Poll for browser processes to detect when user closes all windows
-  var closed = false;
-  var processNames = {
-    edge: 'msedge.exe', chrome: 'chrome.exe', brave: 'brave.exe',
-    vivaldi: 'vivaldi.exe', firefox: 'firefox.exe', palemoon: 'palemoon.exe',
-    waterfox: 'waterfox.exe',
-  };
-
-  var checkCmd, checkFilter;
-  if (process.platform === 'win32') {
-    var exeName = processNames[browser.name] || 'chrome.exe';
-    checkCmd = 'tasklist /FI "IMAGENAME eq ' + exeName + '" /FO CSV /NH';
-    checkFilter = function (line) { return line.includes(exeName); };
-  } else {
-    checkCmd = 'pgrep -f ' + browser.name;
-    checkFilter = function (line) { return line.trim().length > 0; };
-  }
-
-  function checkBrowserGone() {
-    if (closed) return;
-    try {
-      var result = require('child_process').execSync(checkCmd, {
-        encoding: 'utf8',
-        windowsHide: true,
-        timeout: 5000,
-      });
-      var lines = result.trim().split('\n').filter(checkFilter);
-      if (lines.length === 0) {
-        closed = true;
-        process.exit(0);
-      }
-    } catch (e) {
-      if (process.platform !== 'win32') {
-        closed = true;
-        process.exit(0);
-      }
-    }
-    setTimeout(checkBrowserGone, 2000);
-  }
-
-  setTimeout(checkBrowserGone, 5000);
 }
 
 function startServer() {
   var targetUrl = 'http://127.0.0.1:' + PORT;
 
+  // Check if server already running (another instance launched)
   http.get(targetUrl, function (res) {
     res.resume();
     openBrowser(targetUrl);
+    // Start idle checker — if this instance didn't create the server,
+    // it will still exit after 30s of no activity
+    setTimeout(checkIdle, 10000);
   }).on('error', function () {
+    // Server not running — create it
     var server = http.createServer(function (req, res) {
+      lastRequestTime = Date.now();
       try {
         var url = new URL(req.url, 'http://127.0.0.1:' + PORT);
         var filePath = path.join(distDir, url.pathname === '/' ? 'index.html' : url.pathname);
@@ -228,6 +192,7 @@ function startServer() {
     server.on('error', function (err) {
       if (err.code === 'EADDRINUSE') {
         openBrowser(targetUrl);
+        setTimeout(checkIdle, 10000);
       }
     });
 
@@ -238,12 +203,14 @@ function startServer() {
           res.resume();
           if (res.statusCode === 200) {
             openBrowser(targetUrl);
+            // Start idle checker — exit after 30s of no requests
+            setTimeout(checkIdle, 10000);
           } else {
             setTimeout(checkReady, 200);
           }
         }).on('error', function () {
           retries++;
-          if (retries > 50) { openBrowser(targetUrl); return; }
+          if (retries > 50) { openBrowser(targetUrl); setTimeout(checkIdle, 10000); return; }
           setTimeout(checkReady, 200);
         });
       }
