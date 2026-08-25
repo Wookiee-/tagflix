@@ -4,17 +4,6 @@ const fs = require('fs');
 const { spawn } = require('child_process');
 const os = require('os');
 
-// Hide console window on Windows — spawn PowerShell hidden, no flash
-if (process.platform === 'win32') {
-  try {
-    var hide = spawn('powershell', [
-      '-NoProfile', '-Command',
-      'Add-Type "using System; using System.Runtime.InteropServices; public class C { [DllImport(\\"kernel32.dll\\")] public static extern bool FreeConsole(); }" ; [C]::FreeConsole()'
-    ], { detached: true, stdio: 'ignore', windowsHide: true });
-    hide.unref();
-  } catch (e) {}
-}
-
 const PORT = 5173;
 
 const isPkg = typeof process.pkg !== 'undefined';
@@ -66,9 +55,7 @@ function openBrowser(url) {
 
   browser.unref();
 
-  // Track actual Edge processes to detect when the user closes the window
-  // When Edge is already running, spawn exits instantly but the real
-  // Edge process continues. Poll for it.
+  // Poll for Edge processes to detect when user closes all windows
   var edgeClosed = false;
   function checkBrowserGone() {
     if (edgeClosed) return;
@@ -86,7 +73,6 @@ function openBrowser(url) {
     setTimeout(checkBrowserGone, 2000);
   }
 
-  // Start checking after a delay so Edge has time to fully start
   setTimeout(checkBrowserGone, 5000);
 }
 
