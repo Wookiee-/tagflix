@@ -27,11 +27,15 @@ if (fs.existsSync(srcExe) && srcExe !== dstExe) {
   fs.renameSync(srcExe, dstExe);
 }
 
-// Create a VBS wrapper that hides the console window
+// Create a VBS wrapper that hides the console window (silent launch)
 const vbsContent = `Set WshShell = CreateObject("WScript.Shell")
 WshShell.Run Chr(34) & CreateObject("Scripting.FileSystemObject").GetParentFolderName(WScript.ScriptFullName) & "\\tagflix.exe" & Chr(34), 0, False
 `;
 fs.writeFileSync(path.join(DIST_APP, 'Tagflix.vbs'), vbsContent);
+
+// Create a BAT wrapper as alternative
+const batContent = `@echo off\nstart "" /B "%~dp0tagflix.exe"\n`;
+fs.writeFileSync(path.join(DIST_APP, 'Tagflix.bat'), batContent);
 
 console.log('[build] copying dist/ into dist-app/...');
 fs.cpSync(DIST, path.join(DIST_APP, 'dist'), { recursive: true });
@@ -39,4 +43,4 @@ fs.cpSync(DIST, path.join(DIST_APP, 'dist'), { recursive: true });
 const exeSize = fs.statSync(dstExe).size;
 console.log(`[build] done! tagflix.exe: ${(exeSize / 1024 / 1024).toFixed(1)}MB`);
 console.log('[build] ship the dist-app/ folder to users.');
-console.log('[build] users double-click Tagflix.vbs (no console window).');
+console.log('[build] users double-click Tagflix.vbs (no console) or Tagflix.bat (minimal console).');
