@@ -18,6 +18,12 @@
       /* Prevent flash of unstyled content */
       body { background: #0c0b11; margin: 0; }
     </style>
+    <!-- Block all popups from iframes (VidCore ads) -->
+    <script>
+      window.open = function () {
+        return { focus: function(){}, blur: function(){}, close: function(){}, closed: false };
+      };
+    </script>
   </head>
   <body>
     <div id="root"></div>
