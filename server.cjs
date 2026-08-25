@@ -1,8 +1,7 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
-const open = require('open');
-const { execSync } = require('child_process');
+const { spawn, execSync } = require('child_process');
 
 const app = express();
 const PORT = process.env.PORT || 5173;
@@ -27,66 +26,77 @@ app.get('*', (req, res) => {
 });
 
 /**
- * Detects installed Chromium browsers (Edge, Chrome, Brave) on the host machine.
- * Returns the browser name for the `open` package, or null if not found.
+ * Returns the full path to the first installed Chromium browser, or null.
  */
-function getPreferredBrowser() {
+function findBrowserPath() {
   const platform = process.platform;
 
   if (platform === 'win32') {
-    // Check Edge first (most reliable on Windows)
-    const edgePaths = [
-      process.env['PROGRAMFILES(X86)'] + '\\Microsoft\\Edge\\Application\\msedge.exe',
-      process.env['PROGRAMFILES'] + '\\Microsoft\\Edge\\Application\\msedge.exe',
+    const candidates = [
+      // Edge
+      path.join(process.env['PROGRAMFILES(X86)'] || '', 'Microsoft', 'Edge', 'Application', 'msedge.exe'),
+      path.join(process.env['PROGRAMFILES'] || '', 'Microsoft', 'Edge', 'Application', 'msedge.exe'),
+      // Chrome
+      path.join(process.env['PROGRAMFILES(X86)'] || '', 'Google', 'Chrome', 'Application', 'chrome.exe'),
+      path.join(process.env['PROGRAMFILES'] || '', 'Google', 'Chrome', 'Application', 'chrome.exe'),
+      path.join(process.env['LOCALAPPDATA'] || '', 'Google', 'Chrome', 'Application', 'chrome.exe'),
+      // Brave
+      path.join(process.env['PROGRAMFILES'] || '', 'BraveSoftware', 'Brave-Browser', 'Application', 'brave.exe'),
     ];
-    if (edgePaths.some(p => fs.existsSync(p))) return 'msedge';
-
-    const chromePaths = [
-      process.env['PROGRAMFILES(X86)'] + '\\Google\\Chrome\\Application\\chrome.exe',
-      process.env['PROGRAMFILES'] + '\\Google\\Chrome\\Application\\chrome.exe',
-      process.env['LOCALAPPDATA'] + '\\Google\\Chrome\\Application\\chrome.exe',
-    ];
-    if (chromePaths.some(p => fs.existsSync(p))) return 'google chrome';
-
-    const bravePaths = [
-      process.env['PROGRAMFILES'] + '\\BraveSoftware\\Brave-Browser\\Application\\brave.exe',
-    ];
-    if (bravePaths.some(p => fs.existsSync(p))) return 'brave';
+    for (const p of candidates) {
+      if (fs.existsSync(p)) return p;
+    }
   }
   else if (platform === 'darwin') {
-    if (fs.existsSync('/Applications/Microsoft Edge.app')) return 'microsoft edge';
-    if (fs.existsSync('/Applications/Google Chrome.app')) return 'google chrome';
-    if (fs.existsSync('/Applications/Brave Browser.app')) return 'brave';
+    const macCandidates = [
+      '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge',
+      '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+      '/Applications/Brave Browser.app/Contents/MacOS/Brave Browser',
+    ];
+    for (const p of macCandidates) {
+      if (fs.existsSync(p)) return p;
+    }
   }
   else if (platform === 'linux') {
-    try { execSync('which microsoft-edge || which msedge', { stdio: 'ignore' }); return 'microsoft-edge'; } catch (e) {}
-    try { execSync('which google-chrome || which chromium-browser || which chromium', { stdio: 'ignore' }); return 'google chrome'; } catch (e) {}
-    try { execSync('which brave-browser || which brave', { stdio: 'ignore' }); return 'brave'; } catch (e) {}
+    const cmds = ['microsoft-edge', 'msedge', 'google-chrome', 'chromium-browser', 'chromium', 'brave-browser', 'brave'];
+    for (const cmd of cmds) {
+      try {
+        return execSync(`which ${cmd}`, { stdio: ['pipe', 'pipe', 'ignore'] }).toString().trim();
+      } catch (e) {}
+    }
   }
 
-  return null; // Fallback to system default browser
+  return null;
 }
 
-app.listen(PORT, '127.0.0.1', async () => {
+app.listen(PORT, '127.0.0.1', () => {
   const targetUrl = `http://127.0.0.1:${PORT}`;
   console.log(`[tagflix] server running at ${targetUrl}`);
 
-  const browser = getPreferredBrowser();
+  const browserPath = findBrowserPath();
 
-  try {
-    if (browser) {
-      console.log(`[tagflix] launching ${browser} in app mode...`);
-      await open(targetUrl, {
-        app: {
-          name: open.apps[browser] || browser,
-          arguments: [`--app=${targetUrl}`],
-        },
-      });
-    } else {
-      console.log('[tagflix] no chromium browser found — opening in default browser...');
-      await open(targetUrl);
-    }
-  } catch (err) {
-    console.error('[tagflix] failed to launch browser:', err.message);
+  if (browserPath) {
+    console.log(`[tagflix] launching ${path.basename(browserPath)} in app mode...`);
+
+    // Launch browser directly with spawn so we can track its lifecycle
+    const browser = spawn(browserPath, [
+      `--app=${targetUrl}`,
+      '--window-size=1280,720',
+      '--window-position=0,0',
+      '--disable-features=TranslateUI',
+    ], { detached: false, stdio: 'ignore' });
+
+    // When the browser window closes, kill the server
+    browser.on('close', () => {
+      console.log('[tagflix] browser closed — shutting down');
+      process.exit(0);
+    });
+
+    browser.on('error', (err) => {
+      console.error('[tagflix] failed to launch browser:', err.message);
+      console.log(`[tagflix] open ${targetUrl} in your browser`);
+    });
+  } else {
+    console.log(`[tagflix] no chromium browser found — open ${targetUrl} in your browser`);
   }
 });
