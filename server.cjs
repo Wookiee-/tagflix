@@ -1,7 +1,7 @@
 const http = require('http');
 const path = require('path');
 const fs = require('fs');
-const { spawn } = require('child_process');
+const { spawn, execSync } = require('child_process');
 const os = require('os');
 
 const PORT = 5173;
@@ -19,57 +19,134 @@ const MIME = {
   '.ttf': 'font/ttf', '.ico': 'image/x-icon',
 };
 
-function findBrowserPath() {
-  if (process.platform === 'win32') {
-    const candidates = [
-      path.join(process.env['PROGRAMFILES(X86)'] || '', 'Microsoft', 'Edge', 'Application', 'msedge.exe'),
-      path.join(process.env['PROGRAMFILES'] || '', 'Microsoft', 'Edge', 'Application', 'msedge.exe'),
-      path.join(process.env['PROGRAMFILES(X86)'] || '', 'Google', 'Chrome', 'Application', 'chrome.exe'),
-      path.join(process.env['PROGRAMFILES'] || '', 'Google', 'Chrome', 'Application', 'chrome.exe'),
-      path.join(process.env['LOCALAPPDATA'] || '', 'Google', 'Chrome', 'Application', 'chrome.exe'),
-      path.join(process.env['PROGRAMFILES'] || '', 'BraveSoftware', 'Brave-Browser', 'Application', 'brave.exe'),
+function findBrowser() {
+  var platform = process.platform;
+
+  if (platform === 'win32') {
+    var candidates = [
+      { path: path.join(process.env['PROGRAMFILES(X86)'] || '', 'Microsoft', 'Edge', 'Application', 'msedge.exe'), name: 'edge' },
+      { path: path.join(process.env['PROGRAMFILES'] || '', 'Microsoft', 'Edge', 'Application', 'msedge.exe'), name: 'edge' },
+      { path: path.join(process.env['PROGRAMFILES(X86)'] || '', 'Google', 'Chrome', 'Application', 'chrome.exe'), name: 'chrome' },
+      { path: path.join(process.env['PROGRAMFILES'] || '', 'Google', 'Chrome', 'Application', 'chrome.exe'), name: 'chrome' },
+      { path: path.join(process.env['LOCALAPPDATA'] || '', 'Google', 'Chrome', 'Application', 'chrome.exe'), name: 'chrome' },
+      { path: path.join(process.env['PROGRAMFILES'] || '', 'BraveSoftware', 'Brave-Browser', 'Application', 'brave.exe'), name: 'brave' },
+      { path: path.join(process.env['PROGRAMFILES(X86)'] || '', 'BraveSoftware', 'Brave-Browser', 'Application', 'brave.exe'), name: 'brave' },
+      { path: path.join(process.env['LOCALAPPDATA'] || '', 'BraveSoftware', 'Brave-Browser', 'Application', 'brave.exe'), name: 'brave' },
+      { path: path.join(process.env['PROGRAMFILES(X86)'] || '', 'Vivaldi', 'Application', 'vivaldi.exe'), name: 'vivaldi' },
+      { path: path.join(process.env['PROGRAMFILES'] || '', 'Vivaldi', 'Application', 'vivaldi.exe'), name: 'vivaldi' },
     ];
-    for (const p of candidates) {
-      if (fs.existsSync(p)) return p;
+    for (var i = 0; i < candidates.length; i++) {
+      if (fs.existsSync(candidates[i].path)) return candidates[i];
+    }
+  } else if (platform === 'darwin') {
+    var macCandidates = [
+      { path: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', name: 'chrome' },
+      { path: '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge', name: 'edge' },
+      { path: '/Applications/Brave Browser.app/Contents/MacOS/Brave Browser', name: 'brave' },
+      { path: '/Applications/Chromium.app/Contents/MacOS/Chromium', name: 'chrome' },
+      { path: '/Applications/Vivaldi.app/Contents/MacOS/Vivaldi', name: 'vivaldi' },
+    ];
+    for (var i = 0; i < macCandidates.length; i++) {
+      if (fs.existsSync(macCandidates[i].path)) return macCandidates[i];
+    }
+  } else if (platform === 'linux') {
+    var linuxBrowsers = ['google-chrome', 'google-chrome-stable', 'chromium', 'chromium-browser', 'microsoft-edge', 'microsoft-edge-stable', 'brave-browser', 'vivaldi'];
+    for (var i = 0; i < linuxBrowsers.length; i++) {
+      try {
+        var binPath = execSync('which ' + linuxBrowsers[i] + ' 2>/dev/null', { encoding: 'utf8', windowsHide: true }).trim();
+        if (binPath && fs.existsSync(binPath)) {
+          var name = linuxBrowsers[i].includes('edge') ? 'edge' :
+                     linuxBrowsers[i].includes('brave') ? 'brave' :
+                     linuxBrowsers[i].includes('vivaldi') ? 'vivaldi' : 'chrome';
+          return { path: binPath, name: name };
+        }
+      } catch (e) {}
     }
   }
+
   return null;
 }
 
-function openBrowser(url) {
-  var browserPath = findBrowserPath();
-  if (!browserPath) return;
-
-  var profileDir = path.join(os.homedir(), '.tagflix', 'browser-profile');
-
-  var browser = spawn(browserPath, [
+function getBrowserArgs(browserName, url) {
+  var args = [
     '--app=' + url,
     '--window-size=1280,720',
     '--window-position=0,0',
-    '--user-data-dir=' + profileDir,
     '--no-first-run',
-    '--disable-features=msEdgeFirstRunExperience,msEdgeWelcomePage',
-    '--disable-sync',
     '--no-default-browser-check',
-  ], { detached: true, stdio: 'ignore', windowsHide: true });
+    '--disable-sync',
+  ];
 
-  browser.unref();
+  // Browser-specific first-run suppression
+  if (browserName === 'edge') {
+    args.push('--disable-features=msEdgeFirstRunExperience,msEdgeWelcomePage');
+  } else if (browserName === 'chrome') {
+    args.push('--disable-features=ChromeWhatsNewUI');
+  } else if (browserName === 'brave') {
+    args.push('--disable-features=BraveWelcomeUI');
+  }
 
-  // Poll for Edge processes to detect when user closes all windows
-  var edgeClosed = false;
+  return args;
+}
+
+function openBrowser(url) {
+  var browser = findBrowser();
+  if (!browser) return;
+
+  // Persistent profile dir per browser to avoid first-run pages
+  var profileDir = path.join(os.homedir(), '.tagflix', browser.name + '-profile');
+
+  var args = getBrowserArgs(browser.name, url);
+  args.push('--user-data-dir=' + profileDir);
+
+  var proc = spawn(browser.path, args, {
+    detached: true,
+    stdio: 'ignore',
+    windowsHide: true,
+  });
+
+  proc.unref();
+
+  // Poll for browser processes to detect when user closes all windows
+  var closed = false;
+  var processNames = {
+    edge: 'msedge.exe',
+    chrome: 'chrome.exe',
+    brave: 'brave.exe',
+    vivaldi: 'vivaldi.exe',
+  };
+
+  // On non-Windows, use different process detection
+  var checkCmd, checkFilter;
+  if (process.platform === 'win32') {
+    var exeName = processNames[browser.name] || 'chrome.exe';
+    checkCmd = 'tasklist /FI "IMAGENAME eq ' + exeName + '" /FO CSV /NH';
+    checkFilter = function (line) { return line.includes(exeName); };
+  } else {
+    checkCmd = 'pgrep -f ' + browser.name;
+    checkFilter = function (line) { return line.trim().length > 0; };
+  }
+
   function checkBrowserGone() {
-    if (edgeClosed) return;
+    if (closed) return;
     try {
-      var result = require('child_process').execSync(
-        'tasklist /FI "IMAGENAME eq msedge.exe" /FO CSV /NH',
-        { encoding: 'utf8', windowsHide: true }
-      );
-      var lines = result.trim().split('\n').filter(function (l) { return l.includes('msedge.exe'); });
+      var result = require('child_process').execSync(checkCmd, {
+        encoding: 'utf8',
+        windowsHide: true,
+        timeout: 5000,
+      });
+      var lines = result.trim().split('\n').filter(checkFilter);
       if (lines.length === 0) {
-        edgeClosed = true;
+        closed = true;
         process.exit(0);
       }
-    } catch (e) {}
+    } catch (e) {
+      // pgrep returns exit code 1 when no processes found
+      if (process.platform !== 'win32') {
+        closed = true;
+        process.exit(0);
+      }
+    }
     setTimeout(checkBrowserGone, 2000);
   }
 
