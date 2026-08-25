@@ -1,7 +1,14 @@
 const http = require('http');
 const path = require('path');
 const fs = require('fs');
-const { spawn } = require('child_process');
+const { spawn, execSync } = require('child_process');
+
+// Hide console window on Windows (pkg creates console-mode exe)
+if (process.platform === 'win32') {
+  try {
+    execSync('powershell -NoProfile -WindowStyle Hidden -Command "Add-Type \"using System; using System.Runtime.InteropServices; public class Win { [DllImport(\\\"kernel32.dll\\\")\\] public static extern IntPtr GetConsoleWindow(); [DllImport(\\\"user32.dll\\\")\\] public static extern bool ShowWindow(IntPtr h, int c); }\" ; [Win]::ShowWindow([Win]::GetConsoleWindow(), 0)"', { stdio: 'ignore' });
+  } catch (e) {}
+}
 
 const PORT = 5173;
 
