@@ -4,46 +4,27 @@
   "version": "2.0.0",
   "description": "An open-source media aggregator.",
   "author": "TagFlix",
-  "main": "electron/main.cjs",
+  "main": "server.cjs",
+  "bin": {
+    "tagflix": "server.cjs"
+  },
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
     "start": "node server.cjs",
-    "electron:dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
-    "electron:build": "vite build && electron-builder --dir",
+    "package": "vite build && pkg . --targets node18-win-x64 --out-path dist-app && cp -r dist dist-app/dist",
     "cap:init": "npx cap init tagflix com.tagflix.app --web-dir dist",
     "cap:add": "npx cap add android",
     "cap:sync": "npx cap sync",
     "cap:build": "vite build && npx cap sync && npx cap open android"
   },
-  "build": {
-    "appId": "com.tagflix.app",
-    "productName": "Tagflix",
-    "directories": {
-      "output": "release"
-    },
-    "files": [
-      "dist/**/*",
-      "electron/**/*"
+  "pkg": {
+    "targets": [
+      "node18-win-x64"
     ],
-    "win": {
-      "target": "nsis"
-    },
-    "mac": {
-      "target": "dmg"
-    },
-    "linux": {
-      "target": "AppImage"
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true,
-      "shortcutName": "Tagflix"
-    }
+    "outputPath": "dist-app"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.0",
@@ -57,12 +38,9 @@
   },
   "devDependencies": {
     "@types/node": "^24.13.3",
-    "concurrently": "^9.1.2",
-    "electron": "^35.7.2",
-    "electron-builder": "^26.0.12",
+    "pkg": "^5.8.1",
     "typescript": "~6.0.2",
     "vite": "^8.2.0",
-    "vite-plugin-solid": "^2.11.13",
-    "wait-on": "^8.0.3"
+    "vite-plugin-solid": "^2.11.13"
   }
 }
