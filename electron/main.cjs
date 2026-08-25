@@ -30,7 +30,9 @@ function createWindow() {
       sandbox: false,
       webSecurity: true,
       backgroundThrottling: true,
-      preload: path.join(__dirname, 'preload.cjs'),
+      // Explicitly bind to defaultSession so cookies flow naturally
+      session: session.defaultSession,
+      // No preload here — registered globally via registerPreloadScript
     },
   });
 
@@ -80,32 +82,44 @@ app.whenReady().then(async () => {
   session.defaultSession.setUserAgent(CHROME_UA);
   session.defaultSession.clearCache().catch(() => {});
 
-  // Register preload for all frames
+  // Register preload for all frames (single registration, no duplicate)
   session.defaultSession.registerPreloadScript({
     filePath: path.join(__dirname, 'preload.cjs'),
     type: 'frame',
   });
 
+  // Global: Spoof Client Hints on ALL outgoing requests (not just VidCore)
+  // This removes Electron branding from Sec-Ch-Ua headers
+  session.defaultSession.webRequest.onBeforeSendHeaders(
+    (details, callback) => {
+      const headers = { ...details.requestHeaders };
+      headers['Sec-Ch-Ua'] = '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"';
+      headers['Sec-Ch-Ua-Mobile'] = '?0';
+      headers['Sec-Ch-Ua-Platform'] = '"Windows"';
+      callback({ requestHeaders: headers });
+    }
+  );
+
   createWindow();
 
-  // 1. Smart Referer Preservation & Client Hint Spoofing
+  // VidCore-specific: Smart Referer + Origin
   session.defaultSession.webRequest.onBeforeSendHeaders(
     { urls: ['*://*.vidcore.io/*', '*://vidcore.io/*'] },
     (details, callback) => {
+      // Let OPTIONS preflight pass untouched — Chromium handles CORS natively
+      if (details.method === 'OPTIONS') {
+        return callback({ requestHeaders: details.requestHeaders });
+      }
+
       const headers = { ...details.requestHeaders };
 
-      // Preserve inner frame Referer paths (e.g. /v/12345), only set root Referer for initial external requests
+      // Preserve inner frame Referer paths, only set root for external requests
       const existingReferer = headers['Referer'] || details.referrer || '';
       if (!existingReferer.includes('vidcore.io')) {
         headers['Referer'] = 'https://vidcore.io/';
       }
 
-      // Spoof Client Hints to match Chrome 124 UA
-      headers['Sec-Ch-Ua'] = '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"';
-      headers['Sec-Ch-Ua-Mobile'] = '?0';
-      headers['Sec-Ch-Ua-Platform'] = '"Windows"';
-
-      // Only attach Origin on non-GET or existing requests
+      // Only attach Origin on non-GET
       if (headers['Origin'] || details.method !== 'GET') {
         headers['Origin'] = 'https://vidcore.io';
       }
@@ -114,7 +128,7 @@ app.whenReady().then(async () => {
     }
   );
 
-  // 2. Strip X-Frame-Options and CSP frame-ancestors
+  // Strip X-Frame-Options and CSP frame-ancestors
   session.defaultSession.webRequest.onHeadersReceived(
     { urls: ['*://*.vidcore.io/*', '*://vidcore.io/*'] },
     (details, callback) => {
@@ -136,7 +150,7 @@ app.whenReady().then(async () => {
     }
   );
 
-  // 3. Ad Blocker
+  // Ad Blocker
   const AD_DOMAINS = [
     'doubleclick.net', 'googlesyndication.com', 'googleadservices.com',
     'google-analytics.com', 'googletagmanager.com',
