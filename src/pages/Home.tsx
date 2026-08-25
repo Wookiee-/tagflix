@@ -11,14 +11,15 @@ function HeroBanner(props: { item: TMDBMedia }) {
   const type = () => mediaType(props.item);
 
   return (
-    <div class="relative w-full h-[55vh] min-h-[380px] max-h-[560px] overflow-hidden mb-8">
+    <div class="relative w-full h-[50vh] min-h-[340px] max-h-[500px] overflow-hidden mb-8">
       <Show when={props.item.backdrop_path} fallback={
         <div class="absolute inset-0" style={{ background: 'var(--surface)' }} />
       }>
         <img
-          src={backdropUrl(props.item.backdrop_path, 'w1280')}
+          src={backdropUrl(props.item.backdrop_path, 'original')}
           alt=""
-          class="absolute inset-0 w-full h-full object-cover animate-fade-in"
+          class="absolute inset-0 w-full h-full object-cover object-top animate-fade-in"
+          style={{ 'object-position': 'center 20%' }}
         />
       </Show>
 
