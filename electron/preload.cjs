@@ -1,25 +1,21 @@
-// Minimal Electron stealth — safe for cross-origin iframes
-// All operations wrapped in try/catch to prevent crashes in subframes
+// Minimal Electron preload — exposes IPC for the renderer to control the stream view.
+// No stealth patches needed: WebContentsView runs as a top-level Chromium document.
 
-// Safe removal of Electron globals (may not exist in cross-origin frames)
-try { delete window.require; } catch (e) {}
-try { delete window.module; } catch (e) {}
-try { delete window.global; } catch (e) {}
-try { delete window.process; } catch (e) {}
+const { contextBridge, ipcRenderer } = require('electron');
 
-// Hide webdriver flag (Cloudflare checks this)
-try {
-  Object.defineProperty(navigator, 'webdriver', {
-    get: () => false,
-  });
-} catch (e) {}
+// Expose IPC methods to the renderer for the native stream view
+contextBridge.exposeInMainWorld('electron', {
+  ipcRenderer: {
+    // Load a URL in a native WebContentsView positioned at the given bounds
+    loadStreamView: (url, bounds) =>
+      ipcRenderer.invoke('load-stream-view', { url, bounds }),
 
-// Mock chrome.runtime for Cloudflare challenges
-try {
-  if (!window.chrome) {
-    window.chrome = {};
-  }
-  if (!window.chrome.runtime) {
-    window.chrome.runtime = { connect: () => {}, sendMessage: () => {} };
-  }
-} catch (e) {}
+    // Update the view's position/size
+    updateStreamBounds: (bounds) =>
+      ipcRenderer.send('update-stream-bounds', bounds),
+
+    // Destroy the stream view
+    closeStreamView: () =>
+      ipcRenderer.send('close-stream-view'),
+  },
+});

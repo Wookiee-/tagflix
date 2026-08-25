@@ -1,4 +1,4 @@
-const { app, BrowserWindow, session } = require('electron');
+const { app, BrowserWindow, WebContentsView, ipcMain, session } = require('electron');
 const path = require('path');
 
 const isDev = !app.isPackaged;
@@ -12,6 +12,7 @@ app.commandLine.appendSwitch('enable-features', 'VaapiVideoDecoder,PlatformHEVCD
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
 
 let mainWindow;
+let playerView = null;
 
 const CHROME_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
 
@@ -37,7 +38,7 @@ function createWindow() {
   mainWindow.setMenuBarVisibility(false);
   mainWindow.webContents.setUserAgent(CHROME_UA);
 
-  // Block popup ads
+  // Block popup ads from main window
   mainWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
 
   if (isDev) {
@@ -70,69 +71,67 @@ function createWindow() {
   }
 
   mainWindow.once('ready-to-show', () => mainWindow.show());
-  mainWindow.on('closed', () => { mainWindow = null; });
+  mainWindow.on('closed', () => {
+    mainWindow = null;
+    playerView = null;
+  });
 }
+
+// ─── Stream View IPC Handlers ───
+// Instead of iframe, VidCore loads as a top-level Chromium view
+// that behaves identically to a normal Chrome tab.
+
+ipcMain.handle('load-stream-view', async (event, { url, bounds }) => {
+  if (!mainWindow) return;
+
+  // Destroy existing view if swapping streams
+  if (playerView) {
+    mainWindow.contentView.removeChildView(playerView);
+    playerView.webContents.close();
+    playerView = null;
+  }
+
+  // Create native WebContentsView — acts as a top-level document like Chrome/Edge
+  playerView = new WebContentsView({
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      sandbox: true,
+    },
+  });
+
+  mainWindow.contentView.addChildView(playerView);
+
+  // Set position and size matching the UI player container
+  playerView.setBounds(bounds);
+
+  // Block popups inside player view
+  playerView.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  playerView.webContents.setUserAgent(CHROME_UA);
+
+  await playerView.webContents.loadURL(url);
+});
+
+// Update bounds on window resize or layout change
+ipcMain.on('update-stream-bounds', (event, bounds) => {
+  if (playerView) {
+    playerView.setBounds(bounds);
+  }
+});
+
+// Destroy stream view
+ipcMain.on('close-stream-view', () => {
+  if (playerView && mainWindow) {
+    mainWindow.contentView.removeChildView(playerView);
+    playerView.webContents.close();
+    playerView = null;
+  }
+});
+
+// ─── App Lifecycle ───
 
 app.whenReady().then(() => {
   session.defaultSession.setUserAgent(CHROME_UA);
-
-  // Register preload for all frames
-  session.defaultSession.registerPreloadScript({
-    filePath: path.join(__dirname, 'preload.cjs'),
-    type: 'frame',
-  });
-
-  // SINGLE Unified Header Interceptor — no duplicate listeners
-  session.defaultSession.webRequest.onBeforeSendHeaders(
-    (details, callback) => {
-      // Let OPTIONS preflight pass natively
-      if (details.method === 'OPTIONS') {
-        return callback({ requestHeaders: details.requestHeaders });
-      }
-
-      const headers = { ...details.requestHeaders };
-
-      // 1. Global Client Hints spoofing
-      headers['Sec-Ch-Ua'] = '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"';
-      headers['Sec-Ch-Ua-Mobile'] = '?0';
-      headers['Sec-Ch-Ua-Platform'] = '"Windows"';
-
-      // 2. VidCore-specific header handling
-      if (details.url.includes('vidcore.io')) {
-        const existingReferer = headers['Referer'] || details.referrer || '';
-        if (!existingReferer.includes('vidcore.io')) {
-          headers['Referer'] = 'https://vidcore.io/';
-        }
-        if (headers['Origin'] || details.method !== 'GET') {
-          headers['Origin'] = 'https://vidcore.io';
-        }
-      }
-
-      callback({ requestHeaders: headers });
-    }
-  );
-
-  // Strip X-Frame-Options and CSP frame-ancestors
-  session.defaultSession.webRequest.onHeadersReceived(
-    { urls: ['*://*.vidcore.io/*', '*://vidcore.io/*'] },
-    (details, callback) => {
-      const responseHeaders = { ...details.responseHeaders };
-
-      Object.keys(responseHeaders).forEach((key) => {
-        const lowerKey = key.toLowerCase();
-        if (lowerKey === 'x-frame-options') {
-          delete responseHeaders[key];
-        }
-        if (lowerKey === 'content-security-policy') {
-          responseHeaders[key] = responseHeaders[key].map(val =>
-            val.replace(/frame-ancestors[^;]+(;|$)/gi, '')
-          );
-        }
-      });
-
-      callback({ responseHeaders });
-    }
-  );
 
   // Ad Blocker
   const AD_DOMAINS = [
