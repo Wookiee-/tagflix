@@ -88,27 +88,36 @@ app.whenReady().then(async () => {
 
   createWindow();
 
-  // 1. Inject Referer for VidCore, Origin only on POST/OPTIONS (GET omits Origin naturally)
+  // 1. Inject Referer + Fetch Metadata for VidCore requests
   session.defaultSession.webRequest.onBeforeSendHeaders(
     { urls: ['*://*.vidcore.io/*', '*://vidcore.io/*'] },
     (details, callback) => {
       const headers = { ...details.requestHeaders };
+
       headers['Referer'] = 'https://vidcore.io/';
-      // Only add Origin if the request already has one or is not a GET
+      headers['Sec-Fetch-Dest'] = (details.resourceType === 'mainFrame' || details.resourceType === 'subFrame') ? 'iframe' : 'empty';
+      headers['Sec-Fetch-Mode'] = 'navigate';
+      headers['Sec-Fetch-Site'] = 'cross-site';
+
+      // Only add Origin on POST/OPTIONS (browsers omit it on GET)
       if (headers['Origin'] || details.method !== 'GET') {
         headers['Origin'] = 'https://vidcore.io';
       }
+
       callback({ requestHeaders: headers });
     }
   );
 
-  // 2. Strip X-Frame-Options ONLY so iframe can render
+  // 2. Strip X-Frame-Options on both apex and subdomains (case-insensitive)
   session.defaultSession.webRequest.onHeadersReceived(
-    { urls: ['*://*.vidcore.io/*'] },
+    { urls: ['*://*.vidcore.io/*', '*://vidcore.io/*'] },
     (details, callback) => {
       const responseHeaders = { ...details.responseHeaders };
-      delete responseHeaders['x-frame-options'];
-      delete responseHeaders['X-Frame-Options'];
+      Object.keys(responseHeaders).forEach((key) => {
+        if (key.toLowerCase() === 'x-frame-options') {
+          delete responseHeaders[key];
+        }
+      });
       callback({ responseHeaders });
     }
   );
