@@ -88,16 +88,13 @@ app.whenReady().then(async () => {
 
   createWindow();
 
-  // 1. Inject Referer + Fetch Metadata for VidCore requests
+  // 1. Inject Referer strictly for VidCore requests without breaking sub-request fetch mode
   session.defaultSession.webRequest.onBeforeSendHeaders(
     { urls: ['*://*.vidcore.io/*', '*://vidcore.io/*'] },
     (details, callback) => {
       const headers = { ...details.requestHeaders };
 
       headers['Referer'] = 'https://vidcore.io/';
-      headers['Sec-Fetch-Dest'] = (details.resourceType === 'mainFrame' || details.resourceType === 'subFrame') ? 'iframe' : 'empty';
-      headers['Sec-Fetch-Mode'] = 'navigate';
-      headers['Sec-Fetch-Site'] = 'cross-site';
 
       // Only add Origin on POST/OPTIONS (browsers omit it on GET)
       if (headers['Origin'] || details.method !== 'GET') {
@@ -108,21 +105,30 @@ app.whenReady().then(async () => {
     }
   );
 
-  // 2. Strip X-Frame-Options on both apex and subdomains (case-insensitive)
+  // 2. Strip X-Frame-Options and CSP frame-ancestors so iframe can render cleanly
   session.defaultSession.webRequest.onHeadersReceived(
     { urls: ['*://*.vidcore.io/*', '*://vidcore.io/*'] },
     (details, callback) => {
       const responseHeaders = { ...details.responseHeaders };
+
       Object.keys(responseHeaders).forEach((key) => {
-        if (key.toLowerCase() === 'x-frame-options') {
+        const lowerKey = key.toLowerCase();
+        if (lowerKey === 'x-frame-options') {
           delete responseHeaders[key];
         }
+        if (lowerKey === 'content-security-policy') {
+          // Remove frame-ancestors directive if present
+          responseHeaders[key] = responseHeaders[key].map(val =>
+            val.replace(/frame-ancestors[^;]+(;|$)/gi, '')
+          );
+        }
       });
+
       callback({ responseHeaders });
     }
   );
 
-  // 3. Ad Blocker — removed jwpsrv/jwpltx/brightcove/viralize so JWPlayer scripts run
+  // 3. Ad Blocker
   const AD_DOMAINS = [
     'doubleclick.net', 'googlesyndication.com', 'googleadservices.com',
     'google-analytics.com', 'googletagmanager.com',
