@@ -2,6 +2,7 @@ const http = require('http');
 const path = require('path');
 const fs = require('fs');
 const { spawn } = require('child_process');
+const os = require('os');
 
 const PORT = 5173;
 
@@ -56,27 +57,43 @@ function findBrowserPath() {
   return null;
 }
 
+function waitForServer(url, cb, retries) {
+  retries = retries || 0;
+  http.get(url, function (res) {
+    res.resume();
+    cb();
+  }).on('error', function () {
+    if (retries > 30) { cb(); return; } // 3 seconds max
+    setTimeout(function () { waitForServer(url, cb, retries + 1); }, 100);
+  });
+}
+
 server.listen(PORT, '127.0.0.1', function () {
   var targetUrl = 'http://127.0.0.1:' + PORT;
   var browserPath = findBrowserPath();
 
   if (browserPath) {
-    setTimeout(function () {
-      var browser = spawn(browserPath, [
-        '--app=' + targetUrl,
-        '--new-window',
-        '--window-size=1280,720',
-        '--window-position=0,0',
-        '--no-first-run',
-        '--disable-sync',
-        '--disable-sync-preferences',
-        '--no-default-browser-check',
-      ], { detached: true, stdio: 'ignore' });
+    // Wait for server to be ready, then give Edge extra time to init profile
+    waitForServer(targetUrl, function () {
+      setTimeout(function () {
+        var profileDir = path.join(os.tmpdir(), 'tagflix-browser');
+        var browser = spawn(browserPath, [
+          '--app=' + targetUrl,
+          '--window-size=1280,720',
+          '--window-position=0,0',
+          '--user-data-dir=' + profileDir,
+          '--no-first-run',
+          '--disable-sync',
+          '--disable-sync-preferences',
+          '--no-default-browser-check',
+          '--disable-features=msEdgeEnableSync',
+        ], { detached: true, stdio: 'ignore' });
 
-      browser.unref();
-      browser.on('close', function () { process.exit(0); });
-      browser.on('error', function () { process.exit(1); });
-    }, 2000);
+        browser.unref();
+        browser.on('close', function () { process.exit(0); });
+        browser.on('error', function () { process.exit(1); });
+      }, 2000); // extra 2s for Edge profile init
+    });
   }
 });
 
