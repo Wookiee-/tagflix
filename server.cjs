@@ -189,15 +189,9 @@ function startServer() {
         var ext = path.extname(filePath);
         res.setHeader('Content-Type', MIME[ext] || 'application/octet-stream');
         if (ext === '.html') {
-          // CSP sandbox on parent page applies to ALL frames including iframes.
-          // No 'allow-popups' = browser blocks window.open() from any frame.
-          // VidCore checks HTML sandbox attribute, not CSP headers — so this works.
-          res.setHeader('Content-Security-Policy', [
-            "default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob:;",
-            "frame-src https:;",
-            "frame-ancestors 'self';",
-            "sandbox allow-same-origin allow-scripts allow-forms allow-modals allow-presentation allow-downloads allow-storage-access-by-user-activation;",
-          ].join(' '));
+          // CSP sandbox blocks window.open() from ALL frames.
+          // No 'allow-popups' = browser blocks it at native level.
+          res.setHeader('Content-Security-Policy', "default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob:; frame-src https:; frame-ancestors 'self'; sandbox allow-same-origin allow-scripts allow-forms allow-modals allow-presentation allow-downloads allow-storage-access-by-user-activation;");
         }
         fs.createReadStream(filePath).pipe(res);
       } catch (err) {
