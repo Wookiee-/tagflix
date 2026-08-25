@@ -4,47 +4,16 @@
   "version": "2.0.0",
   "description": "An open-source media aggregator.",
   "author": "TagFlix",
-  "main": "electron/main.cjs",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "electron:dev": "concurrently -k \"vite\" \"wait-on http://localhost:5173 && electron .\"",
-    "electron:build": "vite build && electron-builder",
-    "electron:package": "vite build && electron-builder --win --mac --linux",
+    "start": "node server.cjs",
     "cap:init": "npx cap init tagflix com.tagflix.app --web-dir dist",
     "cap:add": "npx cap add android",
     "cap:sync": "npx cap sync",
     "cap:build": "vite build && npx cap sync && npx cap open android"
-  },
-  "build": {
-    "appId": "com.tagflix.app",
-    "productName": "Tagflix",
-    "directories": {
-      "output": "release"
-    },
-    "files": [
-      "dist/**/*",
-      "electron/**/*"
-    ],
-    "win": {
-      "target": "nsis"
-    },
-    "mac": {
-      "target": "dmg"
-    },
-    "linux": {
-      "target": "AppImage"
-    },
-    "nsis": {
-      "oneClick": false,
-      "perMachine": false,
-      "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true,
-      "shortcutName": "Tagflix"
-    }
   },
   "dependencies": {
     "@capacitor/android": "^8.5.0",
@@ -52,18 +21,16 @@
     "@capacitor/core": "^8.5.0",
     "@solidjs/router": "^1.0.0",
     "@tailwindcss/vite": "^4.3.3",
+    "express": "^4.21.2",
     "lucide-solid": "^1.33.0",
+    "open": "^10.1.0",
     "solid-js": "^1.9.14",
     "tailwindcss": "^4.3.3"
   },
   "devDependencies": {
     "@types/node": "^24.13.3",
-    "concurrently": "^10.0.5",
-    "electron": "^43.4.1",
-    "electron-builder": "^26.15.3",
     "typescript": "~6.0.2",
     "vite": "^8.2.0",
-    "vite-plugin-solid": "^2.11.13",
-    "wait-on": "^8.0.3"
+    "vite-plugin-solid": "^2.11.13"
   }
 }
