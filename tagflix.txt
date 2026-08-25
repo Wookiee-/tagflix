@@ -1,24 +1,4 @@
-A 300-level player error (typically HLS.js / HTML5 Media Error 3 or VAST 300) in VidCore’s embed player indicates a media decoding/playback error or CORS/stream manifest load failure.
-
-VidCore works in Microsoft Edge because Edge comes pre-packaged with proprietary media codecs (like Widevine DRM hooks, AAC, and Dolby audio/video pass-throughs) and handles third-party cookies/iframes without extra Electron restrictions.
-
-Electron's default session drops third-party iframe requests and lacks specific Chromium widevine/codec flags by default.
-
-Why VidCore Fails in Electron while VidKing Works
-VidCore relies on Native Codecs / DRM / WebAssembly: VidCore’s underlying HLS stream often uses audio or video codecs (like AAC-LC or AC-3 audio streams) or WebAssembly workers that Electron restricts unless explicitly enabled.
-
-Strict Third-Party Cookie & Isolation Rules: VidCore checks for valid local storage / session tokens inside the iframe. Electron blocks cross-origin iframe storage by default.
-
-Electron Security Defaults (CORS & User-Agent): VidCore explicitly blocks requests whose User-Agent identifies as "Electron".
-
-The Fix: Electron Main Process Configuration
-Update your Electron main window setup and network session interception in main.ts or main.js:
-
-1. Configure BrowserWindow WebPreferences
-Ensure third-party storage, plugins, and web security parameters match standard Chrome:
-
-TypeScript
-// main.ts
+Unlike Error 300 (which is a browser/video player media decoding failure), an Error 500 (Internal Server Error) is a backend response.  When VidCore returns a 500 status code while loading inside Electron, it means their edge servers are explicitly rejecting the request or throwing an unhandled exception because your Electron session is sending header combinations that crash their backend routing logic.Why VidCore Throws a 500 Error in ElectronHeader Conflict / Missing Parameters: In the previous performance tweak, setting access-control-allow-origin: * or forcing custom CORS headers combined with your Referer override causes VidCore's backend API (e.g., api/source/...) to reject the dynamic handshake.  Missing Cookie Context: VidCore requires initial session tokens/cookies generated on request initialization. Stripping headers or separating Origin from Referer breaks the server-side session validator.Third-Party Storage Partitioning: Modern Chromium (and Electron) uses State Partitioning. VidCore's iframe can't read its own storage keys across cross-origin boundaries, leading to an uncaught script error on their server.The Fix: Clean Session & Selective Header ProxyDo not inject broad wildcard CORS headers into the server's response. Instead, match only the request headers VidCore expects from a standard Chrome browser.Update your Electron main process session handler (main.ts):TypeScript// main.ts
 import { app, BrowserWindow, session } from 'electron';
 
 function createWindow() {
@@ -28,63 +8,52 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      webSecurity: false, // Prevents CORS blocks on nested HLS manifest calls inside the iframe
-      allowRunningInsecureContent: true,
-      experimentalFeatures: true, // Enables underlying media features
+      webSecurity: true, // Keep enabled so standard cookie & storage rules work
+      partition: 'persist:vidcore_session', // Persists storage state to pass token checks
     },
   });
 
-  mainWindow.loadURL('http://localhost:3000');
-}
-2. Disguise User-Agent & Inject Origin/Referer Headers
-VidCore checks request origins and rejects default Electron User-Agents. Forcharge the session headers to mimic Chrome:
+  const chromeUserAgent =
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
 
-TypeScript
-app.whenReady().then(() => {
-  const filter = { urls: ['*://*.vidcore.*/*', '*://*.vidking.*/*'] };
-
-  // 1. Spoof User-Agent globally so player scripts treat Electron as Google Chrome
-  const chromeUserAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
+  // 1. Force a real Chrome User-Agent across all sub-requests
   session.defaultSession.setUserAgent(chromeUserAgent);
 
-  // 2. Intercept and rewrite request headers for VidCore
-  session.defaultSession.webRequest.onBeforeSendHeaders(filter, (details, callback) => {
-    details.requestHeaders['User-Agent'] = chromeUserAgent;
-    details.requestHeaders['Referer'] = 'https://vidcore.io/';
-    details.requestHeaders['Origin'] = 'https://vidcore.io/';
-    callback({ requestHeaders: details.requestHeaders });
-  });
+  // 2. Clear old broken response handlers and ONLY tweak request headers for VidCore
+  session.defaultSession.webRequest.onBeforeSendHeaders(
+    { urls: ['*://*.vidcore.*/*', '*://*.vidking.*/*'] },
+    (details, callback) => {
+      const headers = { ...details.requestHeaders };
 
-  createWindow();
-});
-3. Enable Proprietary Codecs via Command Line Switches
-Place these flags before app.whenReady() at the very top of your Electron main process file:
+      headers['User-Agent'] = chromeUserAgent;
+      headers['Referer'] = 'https://vidcore.io/';
+      headers['Origin'] = 'https://vidcore.io/';
+      
+      // Ensure Sec-Fetch headers match standard Chrome iframe requests
+      headers['Sec-Fetch-Dest'] = 'iframe';
+      headers['Sec-Fetch-Mode'] = 'navigate';
+      headers['Sec-Fetch-Site'] = 'cross-site';
 
-TypeScript
-// Add at the top of main.ts before app.on('ready')
-app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
-app.commandLine.appendSwitch('disable-site-isolation-trials');
-app.commandLine.appendSwitch('ignore-certificate-errors');
-React <iframe /> Component Setup
-In your React frontend, ensure the iframe allows all necessary permissions and media features:
+      callback({ requestHeaders: headers });
+    }
+  );
 
-TypeScript
-export const VidCorePlayer = ({ embedUrl }: { embedUrl: string }) => {
+  // 3. DO NOT use onHeadersReceived to inject access-control-allow-origin wildcard!
+  // Allowing default browser headers prevents VidCore server 500 exceptions.
+
+  mainWindow.loadURL('http://localhost:3000');
+}
+React <iframe /> AdjustmentsEnsure your iframe allows credentialed state and doesn't restrict storage access:TypeScriptexport const VidCorePlayer = ({ embedUrl }: { embedUrl: string }) => {
   return (
     <div className="w-full h-full bg-black">
       <iframe
         src={embedUrl}
         className="w-full h-full border-0"
         allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
-        // Grant full script and storage rights to the iframe
+        // Ensure allow-same-origin and allow-scripts are active
         sandbox="allow-forms allow-modals allow-orientation-lock allow-pointer-lock allow-popups allow-same-origin allow-scripts allow-top-navigation-by-user-activation"
       />
     </div>
   );
 };
-Summary Checklist for Electron
-Set webSecurity: false inside the Electron webPreferences so VidCore's iframe can make cross-origin .m3u8 segment fetches.
-
-Override setUserAgent so VidCore doesn't serve a broken fallback player to Electron binaries.
-
-Rewrite Referer and Origin headers to [https://vidcore.io/](https://vidcore.io/).
+Quick VerificationRemove any session.defaultSession.webRequest.onHeadersReceived logic from your project.Clear your Electron app cache (app.clearCache()) or restart the app process to clear broken 500-error session tokens.Open DevTools (Network tab) inside Electron to confirm that requests to vidcore.io return 200 OK rather than 500 Internal Server Error.

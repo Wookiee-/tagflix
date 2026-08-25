@@ -16,6 +16,8 @@ app.commandLine.appendSwitch('disable-http-cache', 'false'); // enable cache to 
 
 let mainWindow;
 
+const CHROME_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1280,
@@ -31,21 +33,21 @@ function createWindow() {
       webviewTag: false,
       sandbox: false,
       // ═══════════════════════════════════════════════════════════
-      // 2. webSecurity: TRUE — proper memory/network management.
-      //    CORS is handled via onHeadersReceived injection below.
+      // 2. webSecurity: TRUE — standard cookie & storage rules.
+      //    NO wildcard CORS injection — VidCore's backend rejects it.
+      //    Use partition for persistent VidCore session tokens.
       // ═══════════════════════════════════════════════════════════
       webSecurity: true,
       allowRunningInsecureContent: false,
       experimentalFeatures: true,
       backgroundThrottling: true,
+      partition: 'persist:vidcore_session',
       preload: path.join(__dirname, 'preload.cjs'),
     },
   });
 
   mainWindow.setMenuBarVisibility(false);
-
-  const ua = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
-  mainWindow.webContents.setUserAgent(ua);
+  mainWindow.webContents.setUserAgent(CHROME_UA);
 
   if (isDev) {
     mainWindow.loadURL('http://localhost:5173');
@@ -114,8 +116,7 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
-  const ua = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
-  session.defaultSession.setUserAgent(ua);
+  session.defaultSession.setUserAgent(CHROME_UA);
   session.defaultSession.clearCache().catch(() => {});
 
   session.defaultSession.registerPreloadScript({
@@ -126,43 +127,54 @@ app.whenReady().then(() => {
   createWindow();
 
   // ═══════════════════════════════════════════════════════════════
-  // 3. CORS header injection — replaces webSecurity: false
-  //    Injects CORS headers for VidCore/VidKing iframes securely.
+  // 3. DO NOT use onHeadersReceived to inject CORS headers!
+  //    VidCore's backend rejects wildcard access-control-allow-origin.
+  //    Let the browser handle CORS naturally with webSecurity: true.
   // ═══════════════════════════════════════════════════════════════
-  const corsFilter = { urls: ['*://*.vidcore.io/*', '*://*.vidking.net/*'] };
 
-  session.defaultSession.webRequest.onHeadersReceived(corsFilter, (details, callback) => {
-    const responseHeaders = { ...details.responseHeaders };
-    responseHeaders['access-control-allow-origin'] = ['*'];
-    responseHeaders['access-control-allow-headers'] = ['*'];
-    responseHeaders['access-control-allow-methods'] = ['GET', 'HEAD', 'OPTIONS'];
-    // Remove X-Frame-Options so iframes work
-    delete responseHeaders['x-frame-options'];
-    delete responseHeaders['content-security-policy'];
-    callback({ responseHeaders });
-  });
+  // Only remove X-Frame-Options so iframes load (VidCore sets this
+  // on some responses but it's not needed in Electron).
+  session.defaultSession.webRequest.onHeadersReceived(
+    { urls: ['*://*.vidcore.io/*', '*://*.vidking.net/*'] },
+    (details, callback) => {
+      const responseHeaders = { ...details.responseHeaders };
+      delete responseHeaders['x-frame-options'];
+      delete responseHeaders['content-security-policy'];
+      callback({ responseHeaders });
+    }
+  );
 
-  // Inject request headers (Referer, Origin) for embeds
+  // 4. Inject request headers to match standard Chrome iframe requests.
+  //    Sec-Fetch-* headers are critical — VidCore's backend checks them.
   session.defaultSession.webRequest.onBeforeSendHeaders(
     { urls: ['*://*.vidcore.io/*', '*://*.vidking.net/*'] },
     (details, callback) => {
       const url = details.url;
-      details.requestHeaders['User-Agent'] = ua;
+      const headers = { ...details.requestHeaders };
+
+      headers['User-Agent'] = CHROME_UA;
+      headers['Accept-Language'] = 'en-US,en;q=0.9';
+
       if (url.includes('vidcore.io')) {
-        details.requestHeaders['Referer'] = 'https://vidcore.io/';
-        details.requestHeaders['Origin'] = 'https://vidcore.io';
+        headers['Referer'] = 'https://vidcore.io/';
+        headers['Origin'] = 'https://vidcore.io';
       } else if (url.includes('vidking.net')) {
-        details.requestHeaders['Referer'] = 'https://www.vidking.net/';
-        details.requestHeaders['Origin'] = 'https://www.vidking.net';
+        headers['Referer'] = 'https://www.vidking.net/';
+        headers['Origin'] = 'https://www.vidking.net';
       }
-      details.requestHeaders['Accept'] = details.requestHeaders['Accept'] || '*/*';
-      details.requestHeaders['Accept-Language'] = 'en-US,en;q=0.9';
-      callback({ requestHeaders: details.requestHeaders });
+
+      // Match standard Chrome iframe request fingerprint
+      headers['Sec-Fetch-Dest'] = 'iframe';
+      headers['Sec-Fetch-Mode'] = 'navigate';
+      headers['Sec-Fetch-Site'] = 'cross-site';
+      headers['Sec-Fetch-User'] = '?1';
+
+      callback({ requestHeaders: headers });
     }
   );
 
   // ═══════════════════════════════════════════════════════════════
-  // 4. Ad blocker — blocks tracking, ads, cryptominers, and
+  // 5. Ad blocker — blocks tracking, ads, cryptominers, and
   //    background workers that flood network during seeking.
   // ═══════════════════════════════════════════════════════════════
   const AD_DOMAINS = [
