@@ -27,7 +27,6 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      webviewTag: true, // Enables isolated Chromium webview — bypasses Cloudflare TLS fingerprinting
       sandbox: false,
       webSecurity: true,
       backgroundThrottling: true,
@@ -38,7 +37,7 @@ function createWindow() {
   mainWindow.setMenuBarVisibility(false);
   mainWindow.webContents.setUserAgent(CHROME_UA);
 
-  // Silent-kill popup ads from the iframe
+  // Block popup ads
   mainWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
 
   if (isDev) {
@@ -70,56 +69,20 @@ function createWindow() {
     });
   }
 
-  // Stealth patches
-  mainWindow.webContents.on('did-finish-load', () => {
-    mainWindow.webContents.executeJavaScript(`
-      Object.defineProperty(navigator, 'webdriver', { get: () => false });
-      if (!window.chrome) window.chrome = {};
-      if (!window.chrome.runtime) window.chrome.runtime = { connect: () => {}, sendMessage: () => {} };
-    `).catch(() => {});
-  });
-
-  mainWindow.webContents.on('frame-navigated', (event, frame) => {
-    if (frame === mainWindow.webContents.mainFrame) return;
-    frame.once('dom-ready', () => {
-      frame.executeJavaScript(`
-        Object.defineProperty(navigator, 'webdriver', { get: () => false });
-        if (!window.chrome) window.chrome = {};
-        if (!window.chrome.runtime) window.chrome.runtime = { connect: () => {}, sendMessage: () => {} };
-      `).catch(() => {});
-    });
-  });
-
   mainWindow.once('ready-to-show', () => mainWindow.show());
   mainWindow.on('closed', () => { mainWindow = null; });
 }
 
 app.whenReady().then(async () => {
-  // Wipe broken session data from previous 500 errors
+  // Clear broken 500-error session tokens
   await session.defaultSession.clearStorageData();
 
   session.defaultSession.setUserAgent(CHROME_UA);
   session.defaultSession.clearCache().catch(() => {});
 
-  session.defaultSession.registerPreloadScript({
-    filePath: path.join(__dirname, 'preload.cjs'),
-    type: 'frame',
-  });
-
   createWindow();
 
-  // Only strip X-Frame-Options — do NOT delete CSP.
-  // VidCore's backend checks CSP during token creation.
-  session.defaultSession.webRequest.onHeadersReceived(
-    { urls: ['*://*.vidcore.io/*', '*://*.vidking.net/*'] },
-    (details, callback) => {
-      const responseHeaders = { ...details.responseHeaders };
-      delete responseHeaders['x-frame-options'];
-      callback({ responseHeaders });
-    }
-  );
-
-  // VidCore's token server expects Referer from its domain
+  // 1. Inject Referer header strictly for VidCore requests
   session.defaultSession.webRequest.onBeforeSendHeaders(
     { urls: ['*://*.vidcore.io/*'] },
     (details, callback) => {
@@ -129,13 +92,23 @@ app.whenReady().then(async () => {
     }
   );
 
-  // Ad blocker
+  // 2. Strip X-Frame-Options ONLY so iframe can render
+  session.defaultSession.webRequest.onHeadersReceived(
+    { urls: ['*://*.vidcore.io/*'] },
+    (details, callback) => {
+      const responseHeaders = { ...details.responseHeaders };
+      delete responseHeaders['x-frame-options'];
+      delete responseHeaders['X-Frame-Options'];
+      callback({ responseHeaders });
+    }
+  );
+
+  // 3. Ad Blocker — removed jwpsrv/jwpltx/brightcove/viralize so JWPlayer scripts run
   const AD_DOMAINS = [
     'doubleclick.net', 'googlesyndication.com', 'googleadservices.com',
-    'google-analytics.com', 'googletagmanager.com', 'googletagservices.com',
+    'google-analytics.com', 'googletagmanager.com',
     'adservice.google.com', 'pagead2.googlesyndication.com',
     'tpc.googlesyndication.com',
-    'jwpltx.com', 'jwpsrv.com', 'brightcove.com', 'viralize.tv',
     'moat.com', 'spotxchange.com', 'spotx.tv', 'serving-sys.com',
     'adnxs.com', 'adsrvr.org', 'demdex.net', 'scorecardresearch.com',
     'popads.net', 'popcash.net', 'propellerads.com', 'onclickmax.com',
@@ -148,19 +121,11 @@ app.whenReady().then(async () => {
     'coinimp.com', 'authedmine.com',
     'je.deuxseethe.com', 'deuxseethe.com',
     'ads.vidcore.io', 'ad.vidcore.io',
-    'adf.ly', 'bit.ly', 'shorte.st',
-    'anonym.to', 'redirect.viglink.com',
+    'adf.ly', 'shorte.st', 'anonym.to',
     'adskeeper.com', 'hilltopads.com', 'clickadu.com',
     'pico.cedra.com', 'ad-maven.com', 'monu.delivery',
-    'pushame.com', 'pushwoosh.com',
   ];
   const adUrlPatterns = AD_DOMAINS.map(d => `*://*.${d}/*`);
-  adUrlPatterns.push(
-    '*://*/ads/*', '*://*/advert/*', '*://*/advertisement/*',
-    '*://*/popunder/*', '*://*/popup/*',
-    '*://*/tracking/*', '*://*/analytics/*',
-    '*://*/beacon/*', '*://*/pixel/*',
-  );
 
   session.defaultSession.webRequest.onBeforeRequest(
     { urls: adUrlPatterns },
