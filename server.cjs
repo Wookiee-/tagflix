@@ -1,16 +1,17 @@
 const http = require('http');
 const path = require('path');
 const fs = require('fs');
-const { spawn, execSync } = require('child_process');
+const { spawn } = require('child_process');
 const os = require('os');
 
-// Hide console window instantly — blocking so it's gone before anything else
+// Hide console window on Windows — spawn PowerShell hidden, no flash
 if (process.platform === 'win32') {
   try {
-    execSync(
-      'powershell -NoProfile -Command "Add-Type \'using System; using System.Runtime.InteropServices; public class C { [DllImport(\\"kernel32.dll\\")] public static extern bool FreeConsole(); }\' ; [C]::FreeConsole()"',
-      { windowsHide: true, timeout: 3000 }
-    );
+    var hide = spawn('powershell', [
+      '-NoProfile', '-Command',
+      'Add-Type "using System; using System.Runtime.InteropServices; public class C { [DllImport(\\"kernel32.dll\\")] public static extern bool FreeConsole(); }" ; [C]::FreeConsole()'
+    ], { detached: true, stdio: 'ignore', windowsHide: true });
+    hide.unref();
   } catch (e) {}
 }
 
@@ -50,7 +51,6 @@ function openBrowser(url) {
   var browserPath = findBrowserPath();
   if (!browserPath) return;
 
-  // Persistent profile dir — Edge reuses cache, no first-run page
   var profileDir = path.join(os.homedir(), '.tagflix', 'browser-profile');
 
   var browser = spawn(browserPath, [
@@ -65,6 +65,29 @@ function openBrowser(url) {
   ], { detached: true, stdio: 'ignore', windowsHide: true });
 
   browser.unref();
+
+  // Track actual Edge processes to detect when the user closes the window
+  // When Edge is already running, spawn exits instantly but the real
+  // Edge process continues. Poll for it.
+  var edgeClosed = false;
+  function checkBrowserGone() {
+    if (edgeClosed) return;
+    try {
+      var result = require('child_process').execSync(
+        'tasklist /FI "IMAGENAME eq msedge.exe" /FO CSV /NH',
+        { encoding: 'utf8', windowsHide: true }
+      );
+      var lines = result.trim().split('\n').filter(function (l) { return l.includes('msedge.exe'); });
+      if (lines.length === 0) {
+        edgeClosed = true;
+        process.exit(0);
+      }
+    } catch (e) {}
+    setTimeout(checkBrowserGone, 2000);
+  }
+
+  // Start checking after a delay so Edge has time to fully start
+  setTimeout(checkBrowserGone, 5000);
 }
 
 function startServer() {
