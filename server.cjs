@@ -41,13 +41,14 @@ function openBrowser(url) {
 
   var browser = spawn(browserPath, [
     '--app=' + url,
+    '--new-window',
+    '--window-size=1280,720',
+    '--window-position=0,0',
     '--no-first-run',
     '--no-default-browser-check',
   ], { detached: true, stdio: 'ignore' });
 
   browser.unref();
-  // Don't exit on close — when Edge is already running, spawn exits
-  // immediately after delegating to the existing instance
 }
 
 function startServer() {
@@ -82,7 +83,6 @@ function startServer() {
     });
 
     server.on('error', function (err) {
-      // Port busy — another instance is running, just open browser
       if (err.code === 'EADDRINUSE') {
         openBrowser(targetUrl);
       }
