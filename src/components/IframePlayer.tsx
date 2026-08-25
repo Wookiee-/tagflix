@@ -9,7 +9,8 @@ interface Props {
 export default function IframePlayer(props: Props) {
   const [loaded, setLoaded] = createSignal(false);
   const [error, setError] = createSignal(false);
-  const [intercepting, setIntercepting] = createSignal(true);
+  const [blocked, setBlocked] = createSignal(true);
+  const [popupCount, setPopupCount] = createSignal(0);
 
   // ─── Block window.open globally ───
   let originalOpen: typeof window.open | null = null;
@@ -17,14 +18,26 @@ export default function IframePlayer(props: Props) {
   onMount(() => {
     originalOpen = window.open;
     // Block ALL window.open calls
-    window.open = function () { return null; } as any;
+    window.open = function () {
+      setPopupCount(c => c + 1);
+      return null;
+    } as any;
 
-    // After 3 seconds, stop intercepting clicks
-    // (most ad popups fire on first/second click)
-    setTimeout(() => setIntercepting(false), 3000);
+    // Close any popups that did open
+    const interval = setInterval(() => {
+      // Try to close any popup windows opened before our override
+      try {
+        // @ts-ignore
+        if (window.__popupWindows) {
+          // @ts-ignore
+          window.__popupWindows.forEach((w: Window) => { try { w.close(); } catch(e) {} });
+        }
+      } catch(e) {}
+    }, 500);
 
     onCleanup(() => {
       if (originalOpen) window.open = originalOpen;
+      clearInterval(interval);
     });
   });
 
@@ -65,43 +78,44 @@ export default function IframePlayer(props: Props) {
         style={{ opacity: loaded() ? 1 : 0 }}
       />
 
-      {/* Click interceptor — absorbs ALL clicks for first 3 seconds */}
-      <Show when={loaded() && intercepting()}>
+      {/* Persistent click interceptor — blocks ALL clicks until user double-clicks */}
+      <Show when={loaded() && blocked()}>
         <div
-          class="absolute inset-0 z-[60]"
-          style={{ cursor: 'default' }}
+          class="absolute inset-0 z-[60] cursor-default"
           onClick={(e) => {
-            // Absorb the click — don't let it reach the iframe
             e.preventDefault();
             e.stopPropagation();
             e.stopImmediatePropagation();
           }}
-          onMouseDown={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-          }}
-          onMouseUp={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-          }}
-          onTouchStart={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
+          onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+          onMouseUp={(e) => { e.preventDefault(); e.stopPropagation(); }}
+          onTouchStart={(e) => { e.preventDefault(); e.stopPropagation(); }}
+          onDblClick={() => {
+            // Double-click dismisses the blocker
+            setBlocked(false);
           }}
         />
       </Show>
 
-      {/* Status badge */}
+      {/* Status badge + dismiss button */}
       <Show when={loaded()}>
-        <div class="absolute top-3 right-3 z-[70] flex items-center gap-2 pointer-events-none">
-          <Show when={intercepting()}>
-            <div class="px-3 py-1.5 rounded-lg text-[11px] font-bold bg-yellow-500/20 text-yellow-400 backdrop-blur-sm animate-pulse">
-              🛡️ Blocking ads — click in 3s...
+        <div class="absolute top-3 right-3 z-[70] flex items-center gap-2">
+          <Show when={blocked()}>
+            <button
+              class="px-3 py-1.5 rounded-lg text-[11px] font-bold bg-yellow-500/20 text-yellow-400 backdrop-blur-sm hover:bg-yellow-500/30 transition-colors cursor-pointer"
+              onClick={() => setBlocked(false)}
+            >
+              🛡️ Click here to enable player
+            </button>
+          </Show>
+          <Show when={!blocked()}>
+            <div class="px-3 py-1.5 rounded-lg text-[11px] font-bold bg-green-500/15 text-green-400/70 backdrop-blur-sm pointer-events-none">
+              🛡️ Protected
             </div>
           </Show>
-          <Show when={!intercepting()}>
-            <div class="px-3 py-1.5 rounded-lg text-[11px] font-bold bg-green-500/15 text-green-400/70 backdrop-blur-sm">
-              🛡️ Protected
+          <Show when={popupCount() > 0}>
+            <div class="px-3 py-1.5 rounded-lg text-[11px] font-bold bg-red-500/20 text-red-400 backdrop-blur-sm pointer-events-none">
+              🚫 {popupCount()} popup{popupCount() > 1 ? 's' : ''} blocked
             </div>
           </Show>
         </div>
