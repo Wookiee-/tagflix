@@ -54,13 +54,10 @@ if (window.navigator.permissions) {
       : originalQuery?.(parameters) ?? Promise.resolve({ state: 'prompt' });
 }
 
-// ─── 6. Prevent iframe detection via window.top comparison ───
-// VidCore may check if window !== window.top to detect iframe embedding
-try {
-  Object.defineProperty(window, 'parent', { get: () => window });
-} catch (e) {
-  // Some contexts disallow this
-}
+// ─── 6. DO NOT override window.parent ───
+// VidCore uses internal frames for token handshakes.
+// Overriding window.parent breaks frame-to-frame communication
+// and causes VidCore to return HTTP 500.
 
 // ─── 7. Ensure WebGL is available (fingerprinting check) ───
 try {

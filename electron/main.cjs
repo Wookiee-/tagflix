@@ -108,15 +108,24 @@ app.whenReady().then(async () => {
 
   createWindow();
 
-  // Webview handles headers naturally — no injection needed.
-  // Only strip X-Frame-Options as a safety net for any remaining iframes.
+  // Only strip X-Frame-Options — do NOT delete CSP.
+  // VidCore's backend checks CSP during token creation.
   session.defaultSession.webRequest.onHeadersReceived(
     { urls: ['*://*.vidcore.io/*', '*://*.vidking.net/*'] },
     (details, callback) => {
       const responseHeaders = { ...details.responseHeaders };
       delete responseHeaders['x-frame-options'];
-      delete responseHeaders['content-security-policy'];
       callback({ responseHeaders });
+    }
+  );
+
+  // VidCore's token server expects Referer from its domain
+  session.defaultSession.webRequest.onBeforeSendHeaders(
+    { urls: ['*://*.vidcore.io/*'] },
+    (details, callback) => {
+      const headers = { ...details.requestHeaders };
+      headers['Referer'] = 'https://vidcore.io/';
+      callback({ requestHeaders: headers });
     }
   );
 
