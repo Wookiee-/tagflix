@@ -42,11 +42,10 @@ export default function IframePlayer(props: Props) {
         </div>
       </Show>
 
-      {/* Iframe — sandbox blocks popups, allows everything else */}
+      {/* Iframe — no sandbox (VidCore detects it) */}
       <iframe
         src={props.url}
         class="w-full h-full border-0"
-        sandbox="allow-same-origin allow-scripts allow-forms allow-modals allow-presentation allow-downloads"
         allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
         onLoad={() => setLoaded(true)}
         onError={() => setError(true)}
