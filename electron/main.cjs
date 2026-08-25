@@ -74,13 +74,13 @@ function createWindow() {
 }
 
 app.whenReady().then(async () => {
-  // Clear broken 500-error session tokens
+  // Clear broken session tokens from previous 500 attempts
   await session.defaultSession.clearStorageData();
 
   session.defaultSession.setUserAgent(CHROME_UA);
   session.defaultSession.clearCache().catch(() => {});
 
-  // Register preload for all frames — VidCore's iframe needs webdriver spoofing
+  // Register preload for all frames
   session.defaultSession.registerPreloadScript({
     filePath: path.join(__dirname, 'preload.cjs'),
     type: 'frame',
@@ -88,15 +88,24 @@ app.whenReady().then(async () => {
 
   createWindow();
 
-  // 1. Inject Referer strictly for VidCore requests without breaking sub-request fetch mode
+  // 1. Smart Referer Preservation & Client Hint Spoofing
   session.defaultSession.webRequest.onBeforeSendHeaders(
     { urls: ['*://*.vidcore.io/*', '*://vidcore.io/*'] },
     (details, callback) => {
       const headers = { ...details.requestHeaders };
 
-      headers['Referer'] = 'https://vidcore.io/';
+      // Preserve inner frame Referer paths (e.g. /v/12345), only set root Referer for initial external requests
+      const existingReferer = headers['Referer'] || details.referrer || '';
+      if (!existingReferer.includes('vidcore.io')) {
+        headers['Referer'] = 'https://vidcore.io/';
+      }
 
-      // Only add Origin on POST/OPTIONS (browsers omit it on GET)
+      // Spoof Client Hints to match Chrome 124 UA
+      headers['Sec-Ch-Ua'] = '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"';
+      headers['Sec-Ch-Ua-Mobile'] = '?0';
+      headers['Sec-Ch-Ua-Platform'] = '"Windows"';
+
+      // Only attach Origin on non-GET or existing requests
       if (headers['Origin'] || details.method !== 'GET') {
         headers['Origin'] = 'https://vidcore.io';
       }
@@ -105,7 +114,7 @@ app.whenReady().then(async () => {
     }
   );
 
-  // 2. Strip X-Frame-Options and CSP frame-ancestors so iframe can render cleanly
+  // 2. Strip X-Frame-Options and CSP frame-ancestors
   session.defaultSession.webRequest.onHeadersReceived(
     { urls: ['*://*.vidcore.io/*', '*://vidcore.io/*'] },
     (details, callback) => {
@@ -117,7 +126,6 @@ app.whenReady().then(async () => {
           delete responseHeaders[key];
         }
         if (lowerKey === 'content-security-policy') {
-          // Remove frame-ancestors directive if present
           responseHeaders[key] = responseHeaders[key].map(val =>
             val.replace(/frame-ancestors[^;]+(;|$)/gi, '')
           );
