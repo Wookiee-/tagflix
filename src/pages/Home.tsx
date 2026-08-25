@@ -1,95 +1,154 @@
-import { createSignal, onMount, Show, For } from 'solid-js';
+import { createSignal, onMount, onCleanup, Show, For } from 'solid-js';
 import { useNavigate } from '@solidjs/router';
 import type { TMDBMedia } from '../lib/tmdb';
 import { getTrending, getPopularMovies, getPopularTV, imageUrl, backdropUrl, mediaTitle, mediaYear, mediaType } from '../lib/tmdb';
 import { getContinueWatching, removeContinueWatching, clearAllContinueWatching, type ContinueWatching } from '../lib/storage';
-import { Play, Star, ChevronRight, X } from 'lucide-solid';
+import { Play, Star, ChevronRight, ChevronLeft, Info, X } from 'lucide-solid';
 
-/* ═══ Hero Banner ═══ */
-function HeroBanner(props: { item: TMDBMedia }) {
+/* ═══ Netflix-style Hero Carousel ═══ */
+function HeroCarousel(props: { items: TMDBMedia[] }) {
   const navigate = useNavigate();
-  const type = () => mediaType(props.item);
+  const [current, setCurrent] = createSignal(0);
+  const [paused, setPaused] = createSignal(false);
+  let timer: ReturnType<typeof setInterval>;
+
+  const type = (item: TMDBMedia) => mediaType(item);
+
+  // Auto-rotate every 6 seconds
+  onMount(() => {
+    timer = setInterval(() => {
+      if (!paused()) {
+        setCurrent((c) => (c + 1) % Math.min(props.items.length, 5));
+      }
+    }, 6000);
+  });
+
+  onCleanup(() => clearInterval(timer));
+
+  const go = (dir: number) => {
+    setCurrent((c) => {
+      const len = Math.min(props.items.length, 5);
+      return (c + dir + len) % len;
+    });
+  };
 
   return (
-    <div class="relative w-full h-[50vh] min-h-[340px] max-h-[500px] overflow-hidden mb-8">
-      <Show when={props.item.backdrop_path} fallback={
-        <div class="absolute inset-0" style={{ background: 'var(--surface)' }} />
-      }>
-        <img
-          src={backdropUrl(props.item.backdrop_path, 'original')}
-          alt=""
-          class="absolute inset-0 w-full h-full object-cover object-top animate-fade-in"
-          style={{ 'object-position': 'center 20%' }}
-        />
-      </Show>
-
-      <div class="absolute inset-0" style={{
-        background: 'linear-gradient(to top, var(--bg) 0%, rgba(0,0,0,0.3) 35%, transparent 70%)',
-      }} />
-      <div class="absolute inset-0" style={{
-        background: 'linear-gradient(to right, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.2) 45%, transparent 80%)',
-      }} />
-      <div class="absolute inset-0" style={{
-        background: 'radial-gradient(ellipse at 20% 80%, var(--accent-glow) 0%, transparent 50%)',
-      }} />
-
-      <div class="absolute bottom-0 left-0 p-6 md:p-10 max-w-2xl z-10 animate-fade-in">
-        <div class="flex items-center gap-2 mb-3">
-          <span class="text-[10px] font-black uppercase tracking-[0.15em] px-3 py-1 rounded-lg glass-strong"
-            style={{ color: 'white' }}>
-            {type() === 'movie' ? 'Movie' : 'TV Series'}
-          </span>
-          <Show when={props.item.vote_average > 0}>
-            <span class="flex items-center gap-1 text-xs font-bold text-yellow-400">
-              <Star size={12} fill="currentColor" /> {props.item.vote_average.toFixed(1)}
-            </span>
-          </Show>
-          <span class="text-xs text-white/40">{mediaYear(props.item)}</span>
-        </div>
-
-        <h1 class="text-3xl md:text-5xl font-black mb-3 leading-[1.05] tracking-tight" style={{ color: 'white' }}>
-          {mediaTitle(props.item)}
-        </h1>
-
-        <p class="text-sm text-white/55 line-clamp-3 mb-6 max-w-lg leading-relaxed">
-          {props.item.overview}
-        </p>
-
-        <div class="flex items-center gap-3">
-          <button
-            class="px-8 py-3.5 rounded-2xl font-bold text-sm text-white flex items-center gap-2.5 transition-all duration-200 hover:brightness-110 hover:scale-[1.03] active:scale-[0.97]"
-            style={{
-              background: 'var(--accent)',
-              'box-shadow': '0 4px 20px var(--accent-glow), 0 0 40px var(--accent-glow)',
-            }}
-            onClick={() => navigate(`/${type()}/${props.item.id}`)}
+    <div
+      class="relative w-full h-[65vh] min-h-[450px] max-h-[700px] overflow-hidden mb-6"
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+    >
+      <For each={props.items.slice(0, 5)}>
+        {(item, i) => (
+          <div
+            class="absolute inset-0 transition-opacity duration-700 ease-in-out"
+            style={{ opacity: current() === i() ? 1 : 0, 'z-index': current() === i() ? 1 : 0 }}
           >
-            <Play size={18} fill="white" /> Watch Now
-          </button>
-          <button
-            class="w-12 h-12 rounded-2xl flex items-center justify-center glass transition-all duration-200 hover:scale-105"
-            onClick={() => navigate(`/${type()}/${props.item.id}`)}
-          >
-            <span class="text-lg" style={{ color: 'white' }}>ℹ</span>
-          </button>
-        </div>
+            {/* Backdrop image */}
+            <Show when={item.backdrop_path} fallback={
+              <div class="absolute inset-0" style={{ background: 'var(--surface)' }} />
+            }>
+              <img
+                src={backdropUrl(item.backdrop_path, 'original')}
+                alt=""
+                class="absolute inset-0 w-full h-full object-cover object-top"
+                style={{ 'object-position': 'center 15%' }}
+              />
+            </Show>
+
+            {/* Gradient overlays */}
+            <div class="absolute inset-0" style={{
+              background: 'linear-gradient(to top, var(--bg) 0%, rgba(10,10,15,0.5) 30%, transparent 60%)',
+            }} />
+            <div class="absolute inset-0" style={{
+              background: 'linear-gradient(to right, rgba(10,10,15,0.8) 0%, rgba(10,10,15,0.3) 40%, transparent 70%)',
+            }} />
+            <div class="absolute inset-0" style={{
+              background: 'linear-gradient(to bottom, rgba(10,10,15,0.4) 0%, transparent 15%)',
+            }} />
+
+            {/* Content */}
+            <div class="absolute bottom-0 left-0 p-8 md:p-14 max-w-3xl z-10">
+              <div class="flex items-center gap-3 mb-4">
+                <span class="text-xs font-bold uppercase tracking-widest px-4 py-1.5 rounded-lg glass-strong text-white/90">
+                  {type(item) === 'movie' ? '🎬 Movie' : '📺 TV Series'}
+                </span>
+                <Show when={item.vote_average > 0}>
+                  <span class="flex items-center gap-1.5 text-sm font-bold text-yellow-400">
+                    <Star size={14} fill="currentColor" /> {item.vote_average.toFixed(1)}
+                  </span>
+                </Show>
+                <span class="text-sm text-white/40 font-medium">{mediaYear(item)}</span>
+              </div>
+
+              <h1 class="text-4xl md:text-6xl font-black mb-4 leading-[1.05] tracking-tight text-white drop-shadow-lg">
+                {mediaTitle(item)}
+              </h1>
+
+              <p class="text-base md:text-lg text-white/60 line-clamp-3 mb-8 max-w-xl leading-relaxed">
+                {item.overview}
+              </p>
+
+              <div class="flex items-center gap-4">
+                <button
+                  class="btn-primary"
+                  onClick={() => navigate(`/${type(item)}/${item.id}`)}
+                >
+                  <Play size={22} fill="white" /> Watch Now
+                </button>
+                <button
+                  class="btn-secondary"
+                  onClick={() => navigate(`/${type(item)}/${item.id}`)}
+                >
+                  <Info size={20} /> More Info
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </For>
+
+      {/* Navigation arrows */}
+      <button
+        class="absolute left-4 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full flex items-center justify-center bg-black/40 backdrop-blur-md text-white/80 hover:text-white hover:bg-black/60 transition-all border border-white/10"
+        onClick={() => go(-1)}
+      >
+        <ChevronLeft size={24} />
+      </button>
+      <button
+        class="absolute right-4 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full flex items-center justify-center bg-black/40 backdrop-blur-md text-white/80 hover:text-white hover:bg-black/60 transition-all border border-white/10"
+        onClick={() => go(1)}
+      >
+        <ChevronRight size={24} />
+      </button>
+
+      {/* Dots */}
+      <div class="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2">
+        <For each={props.items.slice(0, 5)}>
+          {(_, i) => (
+            <button
+              class={`carousel-dot ${current() === i() ? 'active' : ''}`}
+              onClick={() => setCurrent(i())}
+            />
+          )}
+        </For>
       </div>
     </div>
   );
 }
 
 /* ═══ Section Header ═══ */
-function SectionHeader(props: { title: string; onSeeAll?: () => void; onClear?: () => void }) {
+function SectionHeader(props: { title: string; icon?: string; onSeeAll?: () => void; onClear?: () => void }) {
   return (
-    <div class="flex items-center justify-between px-4 md:px-10 mb-4">
-      <h2 class="text-base md:text-lg font-bold tracking-tight" style={{ color: 'white' }}>
+    <div class="flex items-center justify-between px-6 md:px-12 mb-5">
+      <h2 class="text-lg md:text-xl font-bold tracking-tight text-white flex items-center gap-2">
+        {props.icon && <span>{props.icon}</span>}
         {props.title}
       </h2>
-      <div class="flex items-center gap-3">
+      <div class="flex items-center gap-4">
         <Show when={props.onClear}>
           <button
-            class="text-xs font-semibold opacity-40 hover:opacity-80 transition-opacity"
-            style={{ color: 'var(--text)' }}
+            class="text-sm font-medium text-white/40 hover:text-white/70 transition-colors"
             onClick={props.onClear}
           >
             Clear All
@@ -97,11 +156,11 @@ function SectionHeader(props: { title: string; onSeeAll?: () => void; onClear?: 
         </Show>
         <Show when={props.onSeeAll}>
           <button
-            class="flex items-center gap-1 text-xs font-semibold transition-all hover:gap-2"
+            class="flex items-center gap-1.5 text-sm font-semibold transition-all hover:gap-2.5"
             style={{ color: 'var(--accent)' }}
             onClick={props.onSeeAll}
           >
-            See All <ChevronRight size={14} />
+            See All <ChevronRight size={16} />
           </button>
         </Show>
       </div>
@@ -116,52 +175,54 @@ function PosterCard(props: { item: TMDBMedia; delay?: number }) {
 
   return (
     <button
-      class="shrink-0 w-[130px] md:w-[170px] group cursor-pointer animate-fade-in"
-      style={{ 'animation-delay': `${(props.delay || 0) * 50}ms` }}
+      class="shrink-0 w-[140px] md:w-[185px] group cursor-pointer animate-fade-in"
+      style={{ 'animation-delay': `${(props.delay || 0) * 60}ms` }}
       onClick={() => navigate(`/${type()}/${props.item.id}`)}
     >
-      <div class="relative w-full aspect-[2/3] rounded-2xl overflow-hidden mb-2 ring-1 ring-white/[0.06] transition-all duration-300 group-hover:ring-white/20 group-hover:shadow-lg"
-        style={{ 'box-shadow': '0 4px 20px rgba(0,0,0,0.3)' }}>
+      <div class="relative w-full aspect-[2/3] rounded-xl overflow-hidden mb-2.5 transition-all duration-300 group-hover:ring-2 group-hover:ring-white/30 group-hover:shadow-2xl group-hover:scale-[1.04]"
+        style={{ 'box-shadow': '0 8px 30px rgba(0,0,0,0.4)' }}>
         <Show when={props.item.poster_path} fallback={
-          <div class="w-full h-full flex items-center justify-center px-2 text-center text-xs font-bold leading-tight"
+          <div class="w-full h-full flex items-center justify-center px-3 text-center text-xs font-bold leading-tight"
             style={{ background: 'var(--surface)', color: 'var(--text)' }}>
             {mediaTitle(props.item)}
           </div>
         }>
           <img
-            src={imageUrl(props.item.poster_path, 'w185')}
+            src={imageUrl(props.item.poster_path, 'w342')}
             alt={mediaTitle(props.item)}
             class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
             loading="lazy"
           />
         </Show>
 
-        <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col justify-end p-3">
-          <div class="flex items-center gap-1.5 mb-1">
-            <div class="w-7 h-7 rounded-full bg-white/90 flex items-center justify-center">
-              <Play size={12} fill="black" class="ml-0.5" style={{ color: 'black' }} />
+        {/* Hover overlay */}
+        <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col justify-end p-4">
+          <div class="flex items-center gap-2 mb-1">
+            <div class="w-9 h-9 rounded-full bg-white/95 flex items-center justify-center shadow-lg">
+              <Play size={14} fill="black" class="ml-0.5" style={{ color: 'black' }} />
             </div>
-            <span class="text-white text-xs font-bold">Watch</span>
+            <span class="text-white text-sm font-bold">Watch</span>
           </div>
         </div>
 
+        {/* Rating badge */}
         <Show when={props.item.vote_average > 0}>
-          <div class="absolute top-2 right-2 px-1.5 py-0.5 rounded-lg glass-strong flex items-center gap-0.5">
-            <Star size={9} fill="#facc15" style={{ color: '#facc15' }} />
-            <span class="text-[10px] font-bold text-white">{props.item.vote_average.toFixed(1)}</span>
+          <div class="absolute top-2.5 right-2.5 px-2 py-1 rounded-lg glass-strong flex items-center gap-1">
+            <Star size={10} fill="#facc15" style={{ color: '#facc15' }} />
+            <span class="text-[11px] font-bold text-white">{props.item.vote_average.toFixed(1)}</span>
           </div>
         </Show>
       </div>
 
-      <p class="text-xs font-semibold truncate transition-colors group-hover:text-white" style={{ color: 'var(--text)' }}>
+      <p class="text-sm font-semibold truncate transition-colors group-hover:text-white" style={{ color: 'var(--text)' }}>
         {mediaTitle(props.item)}
       </p>
-      <p class="text-[10px] opacity-35 mt-0.5">{mediaYear(props.item)}</p>
+      <p class="text-xs text-white/30 mt-0.5 font-medium">{mediaYear(props.item)}</p>
     </button>
   );
 }
 
-/* ═══ Continue Watching Card (with delete) ═══ */
+/* ═══ Continue Watching Card ═══ */
 function ContinueCard(props: {
   item: ContinueWatching;
   onDelete: (key: string) => void;
@@ -169,82 +230,86 @@ function ContinueCard(props: {
   const navigate = useNavigate();
 
   return (
-    <div class="shrink-0 w-[130px] md:w-[170px] group relative animate-fade-in">
+    <div class="shrink-0 w-[140px] md:w-[185px] group relative animate-fade-in">
       {/* Delete button */}
       <button
-        class="absolute -top-2 -right-2 z-20 w-8 h-8 rounded-full flex items-center justify-center bg-black/80 text-white/70 hover:text-white hover:bg-red-500 transition-all duration-200 opacity-0 group-hover:opacity-100 shadow-lg"
+        class="absolute -top-2 -right-2 z-20 w-8 h-8 rounded-full flex items-center justify-center bg-black/80 text-white/60 hover:text-white hover:bg-red-500 transition-all duration-200 opacity-0 group-hover:opacity-100 shadow-lg border border-white/10"
         onClick={(e) => { e.stopPropagation(); props.onDelete(props.item.key); }}
       >
-        <X size={16} />
+        <X size={14} />
       </button>
 
       <button
         class="w-full cursor-pointer"
         onClick={() => navigate(`/${props.item.mediaType}/${props.item.tmdbId}`)}
       >
-        <div class="relative w-full aspect-[2/3] rounded-2xl overflow-hidden mb-2 ring-1 ring-white/[0.06] transition-all duration-300 group-hover:ring-white/20"
-          style={{ 'box-shadow': '0 4px 20px rgba(0,0,0,0.3)' }}>
+        <div class="relative w-full aspect-[2/3] rounded-xl overflow-hidden mb-2.5 transition-all duration-300 group-hover:ring-2 group-hover:ring-white/30 group-hover:shadow-2xl"
+          style={{ 'box-shadow': '0 8px 30px rgba(0,0,0,0.4)' }}>
           <Show when={props.item.poster} fallback={
-            <div class="w-full h-full flex items-center justify-center px-2 text-center text-xs font-bold leading-tight"
+            <div class="w-full h-full flex items-center justify-center px-3 text-center text-xs font-bold leading-tight"
               style={{ background: 'var(--surface)', color: 'var(--text)' }}>
               {props.item.title}
             </div>
           }>
             <img
-              src={imageUrl(props.item.poster, 'w185')}
+              src={imageUrl(props.item.poster, 'w342')}
               alt={props.item.title}
               class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
               loading="lazy"
             />
           </Show>
 
+          {/* Accent glow at bottom */}
           <div class="absolute inset-0" style={{
-            background: 'linear-gradient(to top, var(--accent-glow) 0%, transparent 30%)',
-            opacity: 0.4,
+            background: 'linear-gradient(to top, var(--accent-glow) 0%, transparent 25%)',
+            opacity: 0.3,
           }} />
 
+          {/* Progress bar */}
           <Show when={props.item.progress > 0}>
             <div class="absolute bottom-0 left-0 right-0 h-[3px] bg-white/10">
               <div class="h-full rounded-r-full transition-all duration-300" style={{
                 width: `${Math.min(props.item.progress, 100)}%`,
                 background: 'var(--accent)',
-                'box-shadow': '0 0 8px var(--accent-glow)',
+                'box-shadow': '0 0 10px var(--accent-glow)',
               }} />
             </div>
           </Show>
 
+          {/* Play overlay */}
           <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300">
-            <div class="w-12 h-12 rounded-full bg-white/90 flex items-center justify-center scale-75 group-hover:scale-100 transition-transform duration-300"
-              style={{ 'box-shadow': '0 4px 20px rgba(0,0,0,0.4)' }}>
-              <Play size={18} fill="black" class="ml-0.5" style={{ color: 'black' }} />
+            <div class="w-14 h-14 rounded-full bg-white/95 flex items-center justify-center scale-75 group-hover:scale-100 transition-transform duration-300 shadow-xl"
+              style={{ 'box-shadow': '0 4px 24px rgba(0,0,0,0.5)' }}>
+              <Play size={20} fill="black" class="ml-0.5" style={{ color: 'black' }} />
             </div>
           </div>
         </div>
 
-        <p class="text-xs font-semibold truncate transition-colors group-hover:text-white">{props.item.title}</p>
+        <p class="text-sm font-semibold truncate transition-colors group-hover:text-white">{props.item.title}</p>
+        <p class="text-xs text-white/30 mt-0.5 font-medium">S{props.item.season} E{props.item.episode}</p>
       </button>
     </div>
   );
 }
 
 /* ═══ Horizontal Scroll Row ═══ */
-function MediaRow(props: { title: string; items: TMDBMedia[]; loading?: boolean }) {
+function MediaRow(props: { title: string; icon?: string; items: TMDBMedia[]; loading?: boolean }) {
   return (
-    <div class="mb-8">
-      <SectionHeader title={props.title} />
+    <div class="mb-10">
+      <SectionHeader title={props.title} icon={props.icon} />
       <Show when={!props.loading} fallback={
-        <div class="flex gap-3 px-4 md:px-10 overflow-hidden">
+        <div class="flex gap-4 px-6 md:px-12 overflow-hidden">
           <For each={[1, 2, 3, 4, 5, 6, 7]}>
             {() => (
-              <div class="shrink-0 w-[130px] md:w-[170px]">
-                <div class="w-full aspect-[2/3] rounded-2xl skeleton" />
-                <div class="h-3 rounded-lg mt-2 skeleton w-3/4" />
+              <div class="shrink-0 w-[140px] md:w-[185px]">
+                <div class="w-full aspect-[2/3] rounded-xl skeleton" />
+                <div class="h-3.5 rounded-lg mt-3 skeleton w-3/4" />
               </div>
             )}
           </For>
         </div>
       }>
-        <div class="flex gap-3 px-4 md:px-10 overflow-x-auto pb-2 scroll-smooth">
+        <div class="flex gap-4 px-6 md:px-12 overflow-x-auto pb-3 scroll-smooth">
           <For each={props.items}>
             {(item, i) => <PosterCard item={item} delay={i()} />}
           </For>
@@ -291,15 +356,17 @@ export default function HomePage() {
   };
 
   return (
-    <div class="pb-8">
+    <div class="pb-10">
+      {/* Netflix-style hero carousel */}
       <Show when={trending().length > 0}>
-        <HeroBanner item={trending()[0]} />
+        <HeroCarousel items={trending()} />
       </Show>
 
+      {/* Continue Watching */}
       <Show when={cwItems().length > 0}>
-        <div class="mb-8">
-          <SectionHeader title="Continue Watching" onClear={clearAll} />
-          <div class="flex gap-3 px-4 md:px-10 overflow-x-auto pb-2">
+        <div class="mb-10">
+          <SectionHeader title="Continue Watching" icon="▶️" onClear={clearAll} />
+          <div class="flex gap-4 px-6 md:px-12 overflow-x-auto pb-3">
             <For each={cwItems()}>
               {(cw) => <ContinueCard item={cw} onDelete={deleteEntry} />}
             </For>
@@ -307,9 +374,9 @@ export default function HomePage() {
         </div>
       </Show>
 
-      <MediaRow title="🔥 Trending This Week" items={trending().slice(1)} loading={loading()} />
-      <MediaRow title="Popular Movies" items={popularMovies()} loading={loading()} />
-      <MediaRow title="Popular TV Shows" items={popularTV()} loading={loading()} />
+      <MediaRow title="Trending This Week" icon="🔥" items={trending().slice(1)} loading={loading()} />
+      <MediaRow title="Popular Movies" icon="🎬" items={popularMovies()} loading={loading()} />
+      <MediaRow title="Popular TV Shows" icon="📺" items={popularTV()} loading={loading()} />
     </div>
   );
 }

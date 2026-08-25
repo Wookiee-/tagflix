@@ -4,13 +4,6 @@ import {
   Home, Compass, Search, Film, Tv, Bookmark, Settings,
 } from 'lucide-solid';
 
-/* ══════════════════════════════════════════════════════════════
-   Stremio-inspired layout (root component):
-     Desktop: left sidebar (64px icons) + main content
-     Mobile:  bottom tab bar
-     Player:  fullscreen, no nav
-   ══════════════════════════════════════════════════════════════ */
-
 const NAV_ITEMS = [
   { name: 'Home', icon: Home, path: '/' },
   { name: 'Discover', icon: Compass, path: '/discover' },
@@ -28,7 +21,6 @@ const MOBILE_NAV = [
   { name: 'Settings', icon: Settings, path: '/settings' },
 ];
 
-// Skin definitions
 const SKINS: Record<string, { bg: string; surface: string; text: string }> = {
   dark:     { bg: '#0c0b11', surface: '#16141d', text: '#a0aab6' },
   midnight: { bg: '#0f172a', surface: '#1e293b', text: '#94a3b8' },
@@ -53,7 +45,6 @@ export default function App(props: { children?: JSX.Element }) {
 
   const isPlayer = () => location.pathname === '/player';
 
-  // Detect platform mode
   onMount(() => {
     const detect = () => {
       const root = document.documentElement;
@@ -67,7 +58,6 @@ export default function App(props: { children?: JSX.Element }) {
     window.addEventListener('resize', detect);
     onCleanup(() => window.removeEventListener('resize', detect));
 
-    // Apply saved theme
     try {
       const skin = localStorage.getItem('tagflix_skin') || 'dark';
       const accent = localStorage.getItem('tagflix_accent') || '#3b82f6';
@@ -93,13 +83,13 @@ export default function App(props: { children?: JSX.Element }) {
       {/* ═══ Desktop Sidebar ═══ */}
       <Show when={!isPlayer() && !isMobile()}>
         <aside
-          class="w-16 shrink-0 flex flex-col items-center py-4 gap-1 overflow-y-auto glass-strong"
+          class="w-[72px] shrink-0 flex flex-col items-center py-5 gap-2 overflow-y-auto glass-strong"
           style={{ 'border-right': '1px solid rgba(255,255,255,0.06)' }}
         >
           {/* Logo */}
           <div
-            class="w-10 h-10 rounded-xl flex items-center justify-center mb-4 font-black text-sm text-white"
-            style={{ background: 'var(--accent)' }}
+            class="w-11 h-11 rounded-xl flex items-center justify-center mb-5 font-black text-base text-white"
+            style={{ background: 'var(--accent)', 'box-shadow': '0 4px 16px var(--accent-glow)' }}
           >
             T
           </div>
@@ -109,19 +99,17 @@ export default function App(props: { children?: JSX.Element }) {
             return (
               <A
                 href={item.path}
-                class="w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-200 relative group hover:scale-105"
-                classList={{
-                  'text-white': isActive(item.path),
-                }}
+                class="w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-200 relative group hover:scale-105"
+                classList={{ 'text-white': isActive(item.path) }}
                 style={{
                   background: isActive(item.path) ? 'var(--accent)' : 'transparent',
                   color: isActive(item.path) ? 'white' : 'var(--text)',
+                  'box-shadow': isActive(item.path) ? '0 4px 16px var(--accent-glow)' : 'none',
                 }}
                 title={item.name}
               >
-                <Icon size={20} />
-                <span class="absolute left-14 px-2 py-1 rounded-md text-xs font-semibold text-white whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50"
-                  style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+                <Icon size={22} />
+                <span class="absolute left-14 px-3 py-1.5 rounded-lg text-sm font-semibold text-white whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 glass-strong">
                   {item.name}
                 </span>
               </A>
@@ -132,11 +120,15 @@ export default function App(props: { children?: JSX.Element }) {
 
           <A
             href="/settings"
-            class="w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-150"
-            style={{ color: isActive('/settings') ? 'var(--accent)' : 'var(--text)' }}
+            class="w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-200"
+            style={{
+              color: isActive('/settings') ? 'var(--accent)' : 'var(--text)',
+              background: isActive('/settings') ? 'var(--accent)' : 'transparent',
+              'box-shadow': isActive('/settings') ? '0 4px 16px var(--accent-glow)' : 'none',
+            }}
             title="Settings"
           >
-            <Settings size={20} />
+            <Settings size={22} />
           </A>
         </aside>
       </Show>
@@ -151,7 +143,7 @@ export default function App(props: { children?: JSX.Element }) {
         <nav
           class="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around safe-bottom glass-strong"
           style={{
-            height: '56px',
+            height: '64px',
             'border-top': '1px solid rgba(255,255,255,0.06)',
           }}
         >
@@ -160,11 +152,11 @@ export default function App(props: { children?: JSX.Element }) {
             return (
               <A
                 href={item.path}
-                class="flex flex-col items-center gap-0.5 py-1 px-2"
+                class="flex flex-col items-center gap-1 py-2 px-3"
                 style={{ color: isActive(item.path) ? 'var(--accent)' : 'var(--text)' }}
               >
-                <Icon size={20} />
-                <span class="text-[10px] font-semibold">{item.name}</span>
+                <Icon size={22} />
+                <span class="text-[11px] font-semibold">{item.name}</span>
               </A>
             );
           })}
