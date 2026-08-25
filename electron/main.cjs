@@ -3,9 +3,7 @@ const path = require('path');
 
 const isDev = !app.isPackaged;
 
-// ═══════════════════════════════════════════════════════════════
-// 1. GPU Hardware Acceleration
-// ═══════════════════════════════════════════════════════════════
+// GPU Hardware Acceleration
 app.commandLine.appendSwitch('ignore-gpu-blocklist');
 app.commandLine.appendSwitch('enable-gpu-rasterization');
 app.commandLine.appendSwitch('enable-zero-copy');
@@ -40,7 +38,7 @@ function createWindow() {
   mainWindow.setMenuBarVisibility(false);
   mainWindow.webContents.setUserAgent(CHROME_UA);
 
-  // Block all popup ads
+  // Silent-kill popup ads from the iframe
   mainWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
 
   if (isDev) {
@@ -96,7 +94,10 @@ function createWindow() {
   mainWindow.on('closed', () => { mainWindow = null; });
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  // Wipe broken session data from previous 500 errors
+  await session.defaultSession.clearStorageData();
+
   session.defaultSession.setUserAgent(CHROME_UA);
   session.defaultSession.clearCache().catch(() => {});
 
@@ -108,29 +109,20 @@ app.whenReady().then(() => {
   createWindow();
 
   // ═══════════════════════════════════════════════════════════════
-  // MINIMAL header injection — only set Referer + Origin for
-  // vidcore.io. Do NOT inject Sec-Fetch-* or delete anything.
-  // Let Electron send its natural headers alongside ours.
+  // MINIMAL: Only set Referer for vidcore.io.
+  // Do NOT touch Origin, Sec-Fetch-*, or any other headers.
+  // VidCore's internal XHR/fetch needs its own natural headers.
   // ═══════════════════════════════════════════════════════════════
   session.defaultSession.webRequest.onBeforeSendHeaders(
     { urls: ['*://*.vidcore.io/*', '*://*.vidking.net/*'] },
     (details, callback) => {
       const headers = { ...details.requestHeaders };
-      headers['User-Agent'] = CHROME_UA;
-
-      if (details.url.includes('vidcore.io')) {
-        headers['Referer'] = 'https://vidcore.io/';
-        headers['Origin'] = 'https://vidcore.io';
-      } else if (details.url.includes('vidking.net')) {
-        headers['Referer'] = 'https://www.vidking.net/';
-        headers['Origin'] = 'https://www.vidking.net';
-      }
-
+      headers['Referer'] = 'https://vidcore.io/';
       callback({ requestHeaders: headers });
     }
   );
 
-  // Only strip X-Frame-Options — leave everything else alone
+  // Only strip X-Frame-Options so iframes load
   session.defaultSession.webRequest.onHeadersReceived(
     { urls: ['*://*.vidcore.io/*', '*://*.vidking.net/*'] },
     (details, callback) => {
