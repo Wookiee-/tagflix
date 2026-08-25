@@ -2,7 +2,6 @@ const http = require('http');
 const path = require('path');
 const fs = require('fs');
 const { spawn } = require('child_process');
-const os = require('os');
 
 const PORT = 5173;
 
@@ -57,47 +56,37 @@ function findBrowserPath() {
   return null;
 }
 
-// Phase 1: Start the server and confirm it's listening
+// Wait until server is actually serving content
+function waitForReady(url, cb, retries) {
+  retries = retries || 0;
+  http.get(url, function (res) {
+    res.resume();
+    if (res.statusCode === 200) cb();
+    else setTimeout(function () { waitForReady(url, cb, retries + 1); }, 200);
+  }).on('error', function () {
+    if (retries > 50) { cb(); return; }
+    setTimeout(function () { waitForReady(url, cb, retries + 1); }, 200);
+  });
+}
+
 server.listen(PORT, '127.0.0.1', function () {
   var targetUrl = 'http://127.0.0.1:' + PORT;
 
-  // Phase 2: Self-test — actually fetch the page to confirm it serves content
-  var testReq = http.get(targetUrl, function (testRes) {
-    testRes.resume();
-    if (testRes.statusCode === 200) {
-      // Phase 3: Server is 100% ready — now launch browser
-      launchBrowser(targetUrl);
-    } else {
-      // Retry after 500ms
-      setTimeout(function () { launchBrowser(targetUrl); }, 500);
-    }
-    testReq.on('error', function () {
-      setTimeout(function () { launchBrowser(targetUrl); }, 1000);
-    });
+  waitForReady(targetUrl, function () {
+    var browserPath = findBrowserPath();
+    if (!browserPath) return;
+
+    var browser = spawn(browserPath, [
+      '--app=' + targetUrl,
+      '--no-first-run',
+      '--no-default-browser-check',
+    ], { detached: true, stdio: 'ignore' });
+
+    browser.unref();
+    browser.on('close', function () { process.exit(0); });
+    browser.on('error', function () { process.exit(1); });
   });
 });
-
-function launchBrowser(url) {
-  var browserPath = findBrowserPath();
-  if (!browserPath) return;
-
-  var profileDir = path.join(os.tmpdir(), 'tagflix-browser');
-  var browser = spawn(browserPath, [
-    '--app=' + url,
-    '--window-size=1280,720',
-    '--window-position=0,0',
-    '--user-data-dir=' + profileDir,
-    '--no-first-run',
-    '--disable-sync',
-    '--disable-sync-preferences',
-    '--no-default-browser-check',
-    '--disable-features=msEdgeEnableSync',
-  ], { detached: true, stdio: 'ignore' });
-
-  browser.unref();
-  browser.on('close', function () { process.exit(0); });
-  browser.on('error', function () { process.exit(1); });
-}
 
 process.on('SIGINT', function () { process.exit(0); });
 process.on('SIGHUP', function () { process.exit(0); });
