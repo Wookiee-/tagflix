@@ -18,27 +18,6 @@ const MIME = {
   '.ttf': 'font/ttf', '.ico': 'image/x-icon',
 };
 
-const server = http.createServer((req, res) => {
-  try {
-    const url = new URL(req.url, `http://127.0.0.1:${PORT}`);
-    let filePath = path.join(distDir, url.pathname === '/' ? 'index.html' : url.pathname);
-
-    if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
-      filePath = path.join(distDir, 'index.html');
-    }
-
-    const ext = path.extname(filePath);
-    res.setHeader('Content-Type', MIME[ext] || 'application/octet-stream');
-    if (ext === '.html') {
-      res.setHeader('Content-Security-Policy', "default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data:; frame-src https:; frame-ancestors 'self';");
-    }
-    fs.createReadStream(filePath).pipe(res);
-  } catch (err) {
-    res.statusCode = 500;
-    res.end('Internal Server Error');
-  }
-});
-
 function findBrowserPath() {
   if (process.platform === 'win32') {
     const candidates = [
@@ -56,37 +35,82 @@ function findBrowserPath() {
   return null;
 }
 
-// Wait until server is actually serving content
-function waitForReady(url, cb, retries) {
-  retries = retries || 0;
-  http.get(url, function (res) {
+function openBrowser(url) {
+  var browserPath = findBrowserPath();
+  if (!browserPath) return;
+
+  var browser = spawn(browserPath, [
+    '--app=' + url,
+    '--no-first-run',
+    '--no-default-browser-check',
+  ], { detached: true, stdio: 'ignore' });
+
+  browser.unref();
+  // Don't exit on close — when Edge is already running, spawn exits
+  // immediately after delegating to the existing instance
+}
+
+function startServer() {
+  var targetUrl = 'http://127.0.0.1:' + PORT;
+
+  // Check if server is already running
+  http.get(targetUrl, function (res) {
     res.resume();
-    if (res.statusCode === 200) cb();
-    else setTimeout(function () { waitForReady(url, cb, retries + 1); }, 200);
+    // Server already running — just open a new tab
+    openBrowser(targetUrl);
   }).on('error', function () {
-    if (retries > 50) { cb(); return; }
-    setTimeout(function () { waitForReady(url, cb, retries + 1); }, 200);
+    // Server not running — start it
+    var server = http.createServer(function (req, res) {
+      try {
+        var url = new URL(req.url, 'http://127.0.0.1:' + PORT);
+        var filePath = path.join(distDir, url.pathname === '/' ? 'index.html' : url.pathname);
+
+        if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
+          filePath = path.join(distDir, 'index.html');
+        }
+
+        var ext = path.extname(filePath);
+        res.setHeader('Content-Type', MIME[ext] || 'application/octet-stream');
+        if (ext === '.html') {
+          res.setHeader('Content-Security-Policy', "default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data:; frame-src https:; frame-ancestors 'self';");
+        }
+        fs.createReadStream(filePath).pipe(res);
+      } catch (err) {
+        res.statusCode = 500;
+        res.end('Internal Server Error');
+      }
+    });
+
+    server.on('error', function (err) {
+      // Port busy — another instance is running, just open browser
+      if (err.code === 'EADDRINUSE') {
+        openBrowser(targetUrl);
+      }
+    });
+
+    server.listen(PORT, '127.0.0.1', function () {
+      // Wait for server to be fully ready, then open browser
+      var retries = 0;
+      function checkReady() {
+        http.get(targetUrl, function (res) {
+          res.resume();
+          if (res.statusCode === 200) {
+            openBrowser(targetUrl);
+          } else {
+            setTimeout(checkReady, 200);
+          }
+        }).on('error', function () {
+          retries++;
+          if (retries > 50) { openBrowser(targetUrl); return; }
+          setTimeout(checkReady, 200);
+        });
+      }
+      checkReady();
+    });
   });
 }
 
-server.listen(PORT, '127.0.0.1', function () {
-  var targetUrl = 'http://127.0.0.1:' + PORT;
-
-  waitForReady(targetUrl, function () {
-    var browserPath = findBrowserPath();
-    if (!browserPath) return;
-
-    var browser = spawn(browserPath, [
-      '--app=' + targetUrl,
-      '--no-first-run',
-      '--no-default-browser-check',
-    ], { detached: true, stdio: 'ignore' });
-
-    browser.unref();
-    browser.on('close', function () { process.exit(0); });
-    browser.on('error', function () { process.exit(1); });
-  });
-});
+startServer();
 
 process.on('SIGINT', function () { process.exit(0); });
 process.on('SIGHUP', function () { process.exit(0); });
