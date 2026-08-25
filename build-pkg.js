@@ -2,6 +2,9 @@
 // build-pkg.js — builds server.cjs into a standalone .exe using pkg
 // server.cjs only uses Node.js built-ins (http, fs, path, child_process)
 // so we don't need to bundle any node_modules.
+//
+// NOTE: UPX compression is NOT compatible with pkg — it corrupts the
+// V8 snapshot filesystem that pkg embeds. Do not use UPX.
 
 const { execSync } = require('child_process');
 const fs = require('fs');
