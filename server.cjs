@@ -31,6 +31,10 @@ const server = http.createServer((req, res) => {
 
     const ext = path.extname(filePath);
     res.setHeader('Content-Type', MIME[ext] || 'application/octet-stream');
+    // Block popup ads via CSP
+    if (ext === '.html') {
+      res.setHeader('Content-Security-Policy', "default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data:; frame-src https:; frame-ancestors 'self';");
+    }
     fs.createReadStream(filePath).pipe(res);
   } catch (err) {
     res.statusCode = 500;
