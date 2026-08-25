@@ -4,15 +4,14 @@ const path = require('path');
 const isDev = !app.isPackaged;
 
 // ═══════════════════════════════════════════════════════════════
-// 1. GPU Hardware Acceleration — forces H.264/HEVC to the GPU
+// 1. GPU Hardware Acceleration
 // ═══════════════════════════════════════════════════════════════
 app.commandLine.appendSwitch('ignore-gpu-blocklist');
 app.commandLine.appendSwitch('enable-gpu-rasterization');
 app.commandLine.appendSwitch('enable-zero-copy');
 app.commandLine.appendSwitch('enable-accelerated-video-decode');
-app.commandLine.appendSwitch('enable-features', 'VaapiVideoDecoder,PlatformHEVCDecoderSupport,VaapiVideoEncodeLinuxGL,VaapiVP8ProfileTL0Profile1');
+app.commandLine.appendSwitch('enable-features', 'VaapiVideoDecoder,PlatformHEVCDecoderSupport');
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
-app.commandLine.appendSwitch('disable-http-cache', 'false'); // enable cache to prevent re-downloading segments
 
 let mainWindow;
 
@@ -32,16 +31,8 @@ function createWindow() {
       contextIsolation: true,
       webviewTag: false,
       sandbox: false,
-      // ═══════════════════════════════════════════════════════════
-      // 2. webSecurity: TRUE — standard cookie & storage rules.
-      //    NO wildcard CORS injection — VidCore's backend rejects it.
-      //    Use partition for persistent VidCore session tokens.
-      // ═══════════════════════════════════════════════════════════
       webSecurity: true,
-      allowRunningInsecureContent: false,
-      experimentalFeatures: true,
       backgroundThrottling: true,
-      partition: 'persist:tagflix',
       preload: path.join(__dirname, 'preload.cjs'),
     },
   });
@@ -49,30 +40,20 @@ function createWindow() {
   mainWindow.setMenuBarVisibility(false);
   mainWindow.webContents.setUserAgent(CHROME_UA);
 
-  // BLOCK POPUP ADS: Silently deny all window.open() from iframes.
-  // Without sandbox, VidCore can trigger ad redirects via window.open().
-  mainWindow.webContents.setWindowOpenHandler(() => {
-    return { action: 'deny' };
-  });
+  // Block all popup ads
+  mainWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
 
   if (isDev) {
     mainWindow.loadURL('http://localhost:5173');
     mainWindow.webContents.openDevTools({ mode: 'detach' });
   } else {
-    // Serve dist/ via local HTTP so cross-origin API calls (TMDB) work.
     const http = require('http');
     const fs = require('fs');
     const distDir = path.join(__dirname, '..', 'dist');
-
     const MIME = {
-      '.html': 'text/html',
-      '.js': 'text/javascript',
-      '.css': 'text/css',
-      '.svg': 'image/svg+xml',
-      '.json': 'application/json',
-      '.png': 'image/png',
-      '.jpg': 'image/jpeg',
-      '.woff2': 'font/woff2',
+      '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css',
+      '.svg': 'image/svg+xml', '.json': 'application/json',
+      '.png': 'image/png', '.jpg': 'image/jpeg', '.woff2': 'font/woff2',
     };
 
     const server = http.createServer((req, res) => {
@@ -91,7 +72,7 @@ function createWindow() {
     });
   }
 
-  // Stealth patches on page load
+  // Stealth patches
   mainWindow.webContents.on('did-finish-load', () => {
     mainWindow.webContents.executeJavaScript(`
       Object.defineProperty(navigator, 'webdriver', { get: () => false });
@@ -100,7 +81,6 @@ function createWindow() {
     `).catch(() => {});
   });
 
-  // Re-apply stealth to sub-frames (iframes)
   mainWindow.webContents.on('frame-navigated', (event, frame) => {
     if (frame === mainWindow.webContents.mainFrame) return;
     frame.once('dom-ready', () => {
@@ -112,19 +92,13 @@ function createWindow() {
     });
   });
 
-  mainWindow.once('ready-to-show', () => {
-    mainWindow.show();
-  });
-
-  mainWindow.on('closed', () => {
-    mainWindow = null;
-  });
+  mainWindow.once('ready-to-show', () => mainWindow.show());
+  mainWindow.on('closed', () => { mainWindow = null; });
 }
 
 app.whenReady().then(() => {
   session.defaultSession.setUserAgent(CHROME_UA);
   session.defaultSession.clearCache().catch(() => {});
-  session.defaultSession.clearStorageData().catch(() => {});
 
   session.defaultSession.registerPreloadScript({
     filePath: path.join(__dirname, 'preload.cjs'),
@@ -134,13 +108,29 @@ app.whenReady().then(() => {
   createWindow();
 
   // ═══════════════════════════════════════════════════════════════
-  // 3. DO NOT use onHeadersReceived to inject CORS headers!
-  //    VidCore's backend rejects wildcard access-control-allow-origin.
-  //    Let the browser handle CORS naturally with webSecurity: true.
+  // MINIMAL header injection — only set Referer + Origin for
+  // vidcore.io. Do NOT inject Sec-Fetch-* or delete anything.
+  // Let Electron send its natural headers alongside ours.
   // ═══════════════════════════════════════════════════════════════
+  session.defaultSession.webRequest.onBeforeSendHeaders(
+    { urls: ['*://*.vidcore.io/*', '*://*.vidking.net/*'] },
+    (details, callback) => {
+      const headers = { ...details.requestHeaders };
+      headers['User-Agent'] = CHROME_UA;
 
-  // Only remove X-Frame-Options so iframes load (VidCore sets this
-  // on some responses but it's not needed in Electron).
+      if (details.url.includes('vidcore.io')) {
+        headers['Referer'] = 'https://vidcore.io/';
+        headers['Origin'] = 'https://vidcore.io';
+      } else if (details.url.includes('vidking.net')) {
+        headers['Referer'] = 'https://www.vidking.net/';
+        headers['Origin'] = 'https://www.vidking.net';
+      }
+
+      callback({ requestHeaders: headers });
+    }
+  );
+
+  // Only strip X-Frame-Options — leave everything else alone
   session.defaultSession.webRequest.onHeadersReceived(
     { urls: ['*://*.vidcore.io/*', '*://*.vidking.net/*'] },
     (details, callback) => {
@@ -151,80 +141,27 @@ app.whenReady().then(() => {
     }
   );
 
-  // 4. Inject request headers to match standard Chrome iframe requests.
-  //    Sec-Fetch-* headers are critical — VidCore's backend checks them.
-  // Target ONLY vidcore.io — strip localhost traces completely
-  const vidcoreFilter = { urls: ['*://*.vidcore.io/*'] };
-
-  session.defaultSession.webRequest.onBeforeSendHeaders(vidcoreFilter, (details, callback) => {
-    const headers = { ...details.requestHeaders };
-
-    // Hardcode headers to match standard Chrome iframe behavior
-    headers['User-Agent'] = CHROME_UA;
-    headers['Referer'] = 'https://vidcore.io/';
-    headers['Origin'] = 'https://vidcore.io';
-
-    // Clear Electron's internal localhost flags on API sub-requests
-    delete headers['X-Requested-With'];
-
-    // Match standard Chrome iframe request fingerprint
-    headers['Sec-Fetch-Dest'] = 'iframe';
-    headers['Sec-Fetch-Mode'] = 'navigate';
-    headers['Sec-Fetch-Site'] = 'cross-site';
-
-    callback({ requestHeaders: headers });
-  });
-
-  // VidKing headers (separate filter)
-  session.defaultSession.webRequest.onBeforeSendHeaders(
-    { urls: ['*://*.vidking.net/*'] },
-    (details, callback) => {
-      const headers = { ...details.requestHeaders };
-      headers['User-Agent'] = CHROME_UA;
-      headers['Referer'] = 'https://www.vidking.net/';
-      headers['Origin'] = 'https://www.vidking.net';
-      delete headers['X-Requested-With'];
-      headers['Sec-Fetch-Dest'] = 'iframe';
-      headers['Sec-Fetch-Mode'] = 'navigate';
-      headers['Sec-Fetch-Site'] = 'cross-site';
-      callback({ requestHeaders: headers });
-    }
-  );
-
-  // ═══════════════════════════════════════════════════════════════
-  // 5. Ad blocker — blocks tracking, ads, cryptominers, and
-  //    background workers that flood network during seeking.
-  // ═══════════════════════════════════════════════════════════════
+  // Ad blocker
   const AD_DOMAINS = [
-    // Google ads/tracking
     'doubleclick.net', 'googlesyndication.com', 'googleadservices.com',
     'google-analytics.com', 'googletagmanager.com', 'googletagservices.com',
     'adservice.google.com', 'pagead2.googlesyndication.com',
     'tpc.googlesyndication.com',
-    // Video ad servers
     'jwpltx.com', 'jwpsrv.com', 'brightcove.com', 'viralize.tv',
     'moat.com', 'spotxchange.com', 'spotx.tv', 'serving-sys.com',
-    // Programmatic ad platforms
     'adnxs.com', 'adsrvr.org', 'demdex.net', 'scorecardresearch.com',
-    // Pop-under / pop-up networks
     'popads.net', 'popcash.net', 'propellerads.com', 'onclickmax.com',
     'exoclick.com', 'juicyads.com', 'trafficjunky.com',
-    // Social trackers
     'facebook.net', 'fbcdn.net', 'connect.facebook.net',
-    // Analytics
     'hotjar.com', 'sentry.io', 'amplitude.com',
     'mixpanel.com', 'segment.com', 'branch.io',
     'adjust.com', 'appsflyer.com',
-    // Cryptominers
     'coinhive.com', 'coin-hive.com', 'crypto-loot.com',
     'coinimp.com', 'authedmine.com',
-    // VidCore ad/tracking servers
     'je.deuxseethe.com', 'deuxseethe.com',
     'ads.vidcore.io', 'ad.vidcore.io',
-    // URL shorteners / ad redirects
     'adf.ly', 'bit.ly', 'shorte.st',
     'anonym.to', 'redirect.viglink.com',
-    // Generic ad/tracking patterns
     'adskeeper.com', 'hilltopads.com', 'clickadu.com',
     'pico.cedra.com', 'ad-maven.com', 'monu.delivery',
     'pushame.com', 'pushwoosh.com',
@@ -239,9 +176,7 @@ app.whenReady().then(() => {
 
   session.defaultSession.webRequest.onBeforeRequest(
     { urls: adUrlPatterns },
-    (details, callback) => {
-      callback({ cancel: true });
-    }
+    (details, callback) => { callback({ cancel: true }); }
   );
 
   app.on('activate', () => {
