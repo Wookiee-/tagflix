@@ -88,13 +88,16 @@ app.whenReady().then(async () => {
 
   createWindow();
 
-  // 1. Inject Referer + Origin for VidCore requests (including sub-resources)
+  // 1. Inject Referer for VidCore, Origin only on POST/OPTIONS (GET omits Origin naturally)
   session.defaultSession.webRequest.onBeforeSendHeaders(
     { urls: ['*://*.vidcore.io/*', '*://vidcore.io/*'] },
     (details, callback) => {
       const headers = { ...details.requestHeaders };
       headers['Referer'] = 'https://vidcore.io/';
-      headers['Origin'] = 'https://vidcore.io';
+      // Only add Origin if the request already has one or is not a GET
+      if (headers['Origin'] || details.method !== 'GET') {
+        headers['Origin'] = 'https://vidcore.io';
+      }
       callback({ requestHeaders: headers });
     }
   );
