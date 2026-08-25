@@ -80,6 +80,12 @@ app.whenReady().then(async () => {
   session.defaultSession.setUserAgent(CHROME_UA);
   session.defaultSession.clearCache().catch(() => {});
 
+  // Register preload for all frames — VidCore's iframe needs webdriver spoofing
+  session.defaultSession.registerPreloadScript({
+    filePath: path.join(__dirname, 'preload.cjs'),
+    type: 'frame',
+  });
+
   createWindow();
 
   // 1. Inject Referer header strictly for VidCore requests
