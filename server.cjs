@@ -5,7 +5,6 @@ const { spawn, execSync } = require('child_process');
 const os = require('os');
 
 const PORT = 5173;
-var lastRequestTime = Date.now();
 
 const isPkg = typeof process.pkg !== 'undefined';
 const distDir = isPkg
@@ -20,12 +19,23 @@ const MIME = {
   '.ttf': 'font/ttf', '.ico': 'image/x-icon',
 };
 
-// ─── Idle checker: exit after 30s of no requests ───
-function checkIdle() {
-  if (Date.now() - lastRequestTime > 30000) {
-    process.exit(0);
+// ─── Exit when browser profile is closed ───
+// Chromium locks SingletonLock while running; Firefox locks parent.lock
+function checkBrowserClosed(profileDir, engine) {
+  var lockFile;
+  if (engine === 'gecko') {
+    lockFile = path.join(profileDir, 'parent.lock');
+  } else {
+    lockFile = path.join(profileDir, 'SingletonLock');
   }
-  setTimeout(checkIdle, 3000);
+  // Wait 15s before first check (browser needs time to start)
+  setTimeout(function check() {
+    if (!fs.existsSync(lockFile)) {
+      // Lock released = browser closed
+      process.exit(0);
+    }
+    setTimeout(check, 3000);
+  }, 15000);
 }
 
 function findBrowser() {
@@ -153,6 +163,9 @@ function openBrowser(url) {
   });
 
   proc.unref();
+
+  // Exit when browser profile is closed
+  checkBrowserClosed(profileDir, browser.engine);
 }
 
 function startServer() {
@@ -162,13 +175,9 @@ function startServer() {
   http.get(targetUrl, function (res) {
     res.resume();
     openBrowser(targetUrl);
-    // Start idle checker — if this instance didn't create the server,
-    // it will still exit after 30s of no activity
-    setTimeout(checkIdle, 10000);
   }).on('error', function () {
     // Server not running — create it
     var server = http.createServer(function (req, res) {
-      lastRequestTime = Date.now();
       try {
         var url = new URL(req.url, 'http://127.0.0.1:' + PORT);
         var filePath = path.join(distDir, url.pathname === '/' ? 'index.html' : url.pathname);
@@ -202,15 +211,13 @@ function startServer() {
         http.get(targetUrl, function (res) {
           res.resume();
           if (res.statusCode === 200) {
-            openBrowser(targetUrl);
-            // Start idle checker — exit after 30s of no requests
-            setTimeout(checkIdle, 10000);
+        openBrowser(targetUrl);
           } else {
             setTimeout(checkReady, 200);
           }
         }).on('error', function () {
           retries++;
-          if (retries > 50) { openBrowser(targetUrl); setTimeout(checkIdle, 10000); return; }
+          if (retries > 50) { openBrowser(targetUrl); return; }
           setTimeout(checkReady, 200);
         });
       }
