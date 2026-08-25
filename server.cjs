@@ -56,23 +56,12 @@ function findBrowserPath() {
   return null;
 }
 
-function waitForServer(url, cb, retries) {
-  retries = retries || 0;
-  http.get(url, function (res) {
-    res.resume();
-    cb();
-  }).on('error', function () {
-    if (retries > 50) { cb(); return; }
-    setTimeout(function () { waitForServer(url, cb, retries + 1); }, 100);
-  });
-}
-
 server.listen(PORT, '127.0.0.1', function () {
   var targetUrl = 'http://127.0.0.1:' + PORT;
   var browserPath = findBrowserPath();
 
   if (browserPath) {
-    waitForServer(targetUrl, function () {
+    setTimeout(function () {
       var browser = spawn(browserPath, [
         '--app=' + targetUrl,
         '--new-window',
@@ -87,7 +76,7 @@ server.listen(PORT, '127.0.0.1', function () {
       browser.unref();
       browser.on('close', function () { process.exit(0); });
       browser.on('error', function () { process.exit(1); });
-    });
+    }, 2000);
   }
 });
 
