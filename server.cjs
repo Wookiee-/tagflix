@@ -2,7 +2,6 @@ const http = require('http');
 const path = require('path');
 const fs = require('fs');
 const { spawn, execSync } = require('child_process');
-const os = require('os');
 
 const PORT = process.env.PORT || 5173;
 
@@ -23,7 +22,6 @@ function log(msg) {
 }
 
 log('[tagflix] starting...');
-log(`[tagflix] isPkg=${isPkg}`);
 log(`[tagflix] distDir=${distDir}`);
 log(`[tagflix] distDir exists=${fs.existsSync(distDir)}`);
 
@@ -55,9 +53,7 @@ const server = http.createServer((req, res) => {
 });
 
 function findBrowserPath() {
-  const platform = process.platform;
-
-  if (platform === 'win32') {
+  if (process.platform === 'win32') {
     const candidates = [
       path.join(process.env['PROGRAMFILES(X86)'] || '', 'Microsoft', 'Edge', 'Application', 'msedge.exe'),
       path.join(process.env['PROGRAMFILES'] || '', 'Microsoft', 'Edge', 'Application', 'msedge.exe'),
@@ -67,35 +63,12 @@ function findBrowserPath() {
       path.join(process.env['PROGRAMFILES'] || '', 'BraveSoftware', 'Brave-Browser', 'Application', 'brave.exe'),
     ];
     for (const p of candidates) {
-      log(`[tagflix] checking browser: ${p} → ${fs.existsSync(p)}`);
+      log(`[tagflix] checking: ${p} → ${fs.existsSync(p)}`);
       if (fs.existsSync(p)) return p;
     }
   }
-  else if (platform === 'darwin') {
-    const macCandidates = [
-      '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge',
-      '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-      '/Applications/Brave Browser.app/Contents/MacOS/Brave Browser',
-    ];
-    for (const p of macCandidates) {
-      if (fs.existsSync(p)) return p;
-    }
-  }
-  else if (platform === 'linux') {
-    const cmds = ['microsoft-edge', 'msedge', 'google-chrome', 'chromium-browser', 'chromium', 'brave-browser', 'brave'];
-    for (const cmd of cmds) {
-      try {
-        return execSync(`which ${cmd}`, { stdio: ['pipe', 'pipe', 'ignore'] }).toString().trim();
-      } catch (e) {}
-    }
-  }
-
   return null;
 }
-
-server.on('error', (err) => {
-  log(`[tagflix] server error: ${err.message}`);
-});
 
 server.listen(PORT, '127.0.0.1', () => {
   const targetUrl = `http://127.0.0.1:${PORT}`;
@@ -104,43 +77,32 @@ server.listen(PORT, '127.0.0.1', () => {
   const browserPath = findBrowserPath();
 
   if (browserPath) {
-    // Use a separate user-data-dir so the browser runs independently
-    // from any existing Edge/Chrome instance. This means the --app
-    // window gets its own process that we can track for shutdown.
-    const profileDir = path.join(os.tmpdir(), 'tagflix-profile');
-
-    log(`[tagflix] launching ${browserPath} with profile ${profileDir}`);
+    log(`[tagflix] launching ${browserPath}...`);
 
     setTimeout(() => {
       const browser = spawn(browserPath, [
         `--app=${targetUrl}`,
         '--window-size=1280,720',
         '--window-position=0,0',
-        '--disable-features=TranslateUI',
-        `--user-data-dir=${profileDir}`,
-      ], { detached: false, stdio: 'ignore' });
+      ], { detached: true, stdio: 'ignore' });
 
-      log(`[tagflix] browser spawned with pid ${browser.pid}`);
+      log(`[tagflix] browser pid=${browser.pid}`);
 
-      browser.on('close', (code) => {
-        log(`[tagflix] browser closed (code=${code}) — shutting down`);
-        process.exit(0);
-      });
+      // When Edge is already running, --app sends URL to the existing
+      // instance and the spawned process exits immediately. That's fine —
+      // the page loads in the existing Edge window and the server stays
+      // alive to serve it.
+      browser.unref();
 
       browser.on('error', (err) => {
         log(`[tagflix] browser error: ${err.message}`);
       });
     }, 500);
   } else {
-    log(`[tagflix] no chromium browser found — open ${targetUrl} in your browser`);
+    log(`[tagflix] no browser found — open ${targetUrl} manually`);
   }
 });
 
-process.on('SIGINT', () => {
-  log('[tagflix] shutting down');
-  process.exit(0);
-});
-
-process.on('uncaughtException', (err) => {
-  log(`[tagflix] uncaught: ${err.message}`);
-});
+// Shutdown when console window is closed (Ctrl+C or X button)
+process.on('SIGINT', () => process.exit(0));
+process.on('SIGHUP', () => process.exit(0));
