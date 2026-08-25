@@ -11,36 +11,48 @@ const distDir = isPkg
   ? path.join(path.dirname(process.execPath), 'dist')
   : path.join(__dirname, 'dist');
 
+// Log to file so we can debug when console is hidden
+const logFile = isPkg
+  ? path.join(path.dirname(process.execPath), 'tagflix.log')
+  : path.join(__dirname, 'tagflix.log');
+function log(msg) {
+  const line = `[${new Date().toISOString()}] ${msg}\n`;
+  try { fs.appendFileSync(logFile, line); } catch (e) {}
+  try { console.log(msg); } catch (e) {}
+}
+
+log('[tagflix] starting...');
+log(`[tagflix] isPkg=${isPkg}`);
+log(`[tagflix] process.execPath=${process.execPath}`);
+log(`[tagflix] distDir=${distDir}`);
+log(`[tagflix] distDir exists=${fs.existsSync(distDir)}`);
+
 const MIME = {
-  '.html': 'text/html',
-  '.js': 'text/javascript',
-  '.css': 'text/css',
-  '.svg': 'image/svg+xml',
-  '.json': 'application/json',
-  '.png': 'image/png',
-  '.jpg': 'image/jpeg',
-  '.jpeg': 'image/jpeg',
-  '.gif': 'image/gif',
-  '.woff': 'font/woff',
-  '.woff2': 'font/woff2',
-  '.ttf': 'font/ttf',
-  '.ico': 'image/x-icon',
+  '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css',
+  '.svg': 'image/svg+xml', '.json': 'application/json',
+  '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
+  '.gif': 'image/gif', '.woff': 'font/woff', '.woff2': 'font/woff2',
+  '.ttf': 'font/ttf', '.ico': 'image/x-icon',
 };
 
 // Minimal static file server with SPA fallback
 const server = http.createServer((req, res) => {
-  const url = new URL(req.url, `http://127.0.0.1:${PORT}`);
-  let filePath = path.join(distDir, url.pathname === '/' ? 'index.html' : url.pathname);
+  try {
+    const url = new URL(req.url, `http://127.0.0.1:${PORT}`);
+    let filePath = path.join(distDir, url.pathname === '/' ? 'index.html' : url.pathname);
 
-  // Try to serve the file; fall back to index.html for SPA routing
-  if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
-    filePath = path.join(distDir, 'index.html');
+    if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
+      filePath = path.join(distDir, 'index.html');
+    }
+
+    const ext = path.extname(filePath);
+    res.setHeader('Content-Type', MIME[ext] || 'application/octet-stream');
+    fs.createReadStream(filePath).pipe(res);
+  } catch (err) {
+    log(`[tagflix] request error: ${err.message}`);
+    res.statusCode = 500;
+    res.end('Internal Server Error');
   }
-
-  const ext = path.extname(filePath);
-  res.setHeader('Content-Type', MIME[ext] || 'application/octet-stream');
-
-  fs.createReadStream(filePath).pipe(res);
 });
 
 /**
@@ -59,6 +71,7 @@ function findBrowserPath() {
       path.join(process.env['PROGRAMFILES'] || '', 'BraveSoftware', 'Brave-Browser', 'Application', 'brave.exe'),
     ];
     for (const p of candidates) {
+      log(`[tagflix] checking browser: ${p} → ${fs.existsSync(p)}`);
       if (fs.existsSync(p)) return p;
     }
   }
@@ -84,32 +97,46 @@ function findBrowserPath() {
   return null;
 }
 
+server.on('error', (err) => {
+  log(`[tagflix] server error: ${err.message}`);
+});
+
 server.listen(PORT, '127.0.0.1', () => {
   const targetUrl = `http://127.0.0.1:${PORT}`;
-  console.log(`[tagflix] server running at ${targetUrl}`);
+  log(`[tagflix] server running at ${targetUrl}`);
 
   const browserPath = findBrowserPath();
 
   if (browserPath) {
-    console.log(`[tagflix] launching ${path.basename(browserPath)} in app mode...`);
+    log(`[tagflix] launching ${browserPath} in app mode...`);
 
-    const browser = spawn(browserPath, [
-      `--app=${targetUrl}`,
-      '--window-size=1280,720',
-      '--window-position=0,0',
-      '--disable-features=TranslateUI',
-    ], { detached: false, stdio: 'ignore' });
+    // Small delay to ensure server is fully ready
+    setTimeout(() => {
+      const browser = spawn(browserPath, [
+        `--app=${targetUrl}`,
+        '--window-size=1280,720',
+        '--window-position=0,0',
+        '--disable-features=TranslateUI',
+      ], { detached: false, stdio: 'ignore' });
 
-    browser.on('close', () => {
-      console.log('[tagflix] browser closed — shutting down');
-      process.exit(0);
-    });
+      log(`[tagflix] browser spawned with pid ${browser.pid}`);
 
-    browser.on('error', (err) => {
-      console.error('[tagflix] failed to launch browser:', err.message);
-      console.log(`[tagflix] open ${targetUrl} in your browser`);
-    });
+      browser.on('close', () => {
+        log('[tagflix] browser closed — shutting down');
+        process.exit(0);
+      });
+
+      browser.on('error', (err) => {
+        log(`[tagflix] failed to launch browser: ${err.message}`);
+        log(`[tagflix] open ${targetUrl} in your browser`);
+      });
+    }, 500);
   } else {
-    console.log(`[tagflix] no chromium browser found — open ${targetUrl} in your browser`);
+    log(`[tagflix] no chromium browser found — open ${targetUrl} in your browser`);
   }
+});
+
+// Keep process alive
+process.on('uncaughtException', (err) => {
+  log(`[tagflix] uncaught: ${err.message}`);
 });
