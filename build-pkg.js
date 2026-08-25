@@ -19,7 +19,7 @@ fs.rmSync(DIST_APP, { recursive: true, force: true });
 
 console.log('[build] packaging server.cjs with pkg...');
 execSync(
-  'npx pkg server.cjs --targets node18-win-x64 --out-path dist-app',
+  'npx pkg server.cjs --targets node18-win-x64 --out-path dist-app --options no-console',
   { cwd: ROOT, stdio: 'inherit' }
 );
 
