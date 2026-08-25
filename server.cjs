@@ -189,8 +189,7 @@ function startServer() {
         var ext = path.extname(filePath);
         res.setHeader('Content-Type', MIME[ext] || 'application/octet-stream');
         if (ext === '.html') {
-          res.setHeader('Content-Security-Policy', "default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data:; frame-src https:; frame-ancestors 'self'; child-src 'none';");
-          res.setHeader('X-Frame-Options', 'DENY');
+          res.setHeader('Content-Security-Policy', "default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data:; frame-src https:; frame-ancestors 'self';");
         }
         fs.createReadStream(filePath).pipe(res);
       } catch (err) {
