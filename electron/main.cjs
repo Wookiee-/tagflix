@@ -27,7 +27,7 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      webviewTag: false,
+      webviewTag: true, // Enables isolated Chromium webview — bypasses Cloudflare TLS fingerprinting
       sandbox: false,
       webSecurity: true,
       backgroundThrottling: true,
@@ -108,21 +108,8 @@ app.whenReady().then(async () => {
 
   createWindow();
 
-  // ═══════════════════════════════════════════════════════════════
-  // MINIMAL: Only set Referer for vidcore.io.
-  // Do NOT touch Origin, Sec-Fetch-*, or any other headers.
-  // VidCore's internal XHR/fetch needs its own natural headers.
-  // ═══════════════════════════════════════════════════════════════
-  session.defaultSession.webRequest.onBeforeSendHeaders(
-    { urls: ['*://*.vidcore.io/*', '*://*.vidking.net/*'] },
-    (details, callback) => {
-      const headers = { ...details.requestHeaders };
-      headers['Referer'] = 'https://vidcore.io/';
-      callback({ requestHeaders: headers });
-    }
-  );
-
-  // Only strip X-Frame-Options so iframes load
+  // Webview handles headers naturally — no injection needed.
+  // Only strip X-Frame-Options as a safety net for any remaining iframes.
   session.defaultSession.webRequest.onHeadersReceived(
     { urls: ['*://*.vidcore.io/*', '*://*.vidking.net/*'] },
     (details, callback) => {
