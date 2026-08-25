@@ -82,16 +82,12 @@ server.listen(PORT, '127.0.0.1', () => {
     setTimeout(() => {
       const browser = spawn(browserPath, [
         `--app=${targetUrl}`,
+        '--new-window',
         '--window-size=1280,720',
         '--window-position=0,0',
       ], { detached: true, stdio: 'ignore' });
 
       log(`[tagflix] browser pid=${browser.pid}`);
-
-      // When Edge is already running, --app sends URL to the existing
-      // instance and the spawned process exits immediately. That's fine —
-      // the page loads in the existing Edge window and the server stays
-      // alive to serve it.
       browser.unref();
 
       browser.on('error', (err) => {
@@ -103,6 +99,5 @@ server.listen(PORT, '127.0.0.1', () => {
   }
 });
 
-// Shutdown when console window is closed (Ctrl+C or X button)
 process.on('SIGINT', () => process.exit(0));
 process.on('SIGHUP', () => process.exit(0));
