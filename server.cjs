@@ -2,9 +2,8 @@ const http = require('http');
 const path = require('path');
 const fs = require('fs');
 const { spawn } = require('child_process');
-const os = require('os');
 
-const PORT = 0; // random available port
+const PORT = 5173;
 
 const isPkg = typeof process.pkg !== 'undefined';
 const distDir = isPkg
@@ -21,7 +20,7 @@ const MIME = {
 
 const server = http.createServer((req, res) => {
   try {
-    const url = new URL(req.url, `http://127.0.0.1:${realPort}`);
+    const url = new URL(req.url, `http://127.0.0.1:${PORT}`);
     let filePath = path.join(distDir, url.pathname === '/' ? 'index.html' : url.pathname);
 
     if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
@@ -57,50 +56,40 @@ function findBrowserPath() {
   return null;
 }
 
-let realPort = null;
+function waitForServer(url, cb, retries) {
+  retries = retries || 0;
+  http.get(url, function (res) {
+    res.resume();
+    cb();
+  }).on('error', function () {
+    if (retries > 50) { cb(); return; }
+    setTimeout(function () { waitForServer(url, cb, retries + 1); }, 100);
+  });
+}
 
-function waitAndLaunch(url) {
-  let retries = 0;
-  const tryConnect = () => {
-    http.get(url, (res) => {
-      res.resume();
-      launchBrowser(url);
-    }).on('error', () => {
-      retries++;
-      if (retries > 50) { launchBrowser(url); return; } // give up after 5s
-      setTimeout(tryConnect, 100);
+server.listen(PORT, '127.0.0.1', function () {
+  var targetUrl = 'http://127.0.0.1:' + PORT;
+  var browserPath = findBrowserPath();
+
+  if (browserPath) {
+    waitForServer(targetUrl, function () {
+      var browser = spawn(browserPath, [
+        '--app=' + targetUrl,
+        '--new-window',
+        '--window-size=1280,720',
+        '--window-position=0,0',
+        '--no-first-run',
+        '--disable-sync',
+        '--disable-sync-preferences',
+        '--no-default-browser-check',
+      ], { detached: true, stdio: 'ignore' });
+
+      browser.unref();
+      browser.on('close', function () { process.exit(0); });
+      browser.on('error', function () { process.exit(1); });
     });
-  };
-  tryConnect();
-}
-
-function launchBrowser(url) {
-  const browserPath = findBrowserPath();
-  if (!browserPath) return;
-
-  const profileDir = path.join(os.tmpdir(), 'tagflix-browser');
-  const browser = spawn(browserPath, [
-    `--app=${url}`,
-    '--window-size=1280,720',
-    '--window-position=0,0',
-    `--user-data-dir=${profileDir}`,
-    '--no-first-run',
-    '--disable-sync',
-    '--disable-sync-preferences',
-    '--no-default-browser-check',
-    '--disable-features=msEdgeEnableSync',
-  ], { detached: true, stdio: 'ignore' });
-
-  browser.unref();
-  browser.on('close', () => process.exit(0));
-  browser.on('error', () => process.exit(1));
-}
-
-server.listen(0, '127.0.0.1', () => {
-  realPort = server.address().port;
-  const url = `http://127.0.0.1:${realPort}`;
-  waitAndLaunch(url);
+  }
 });
 
-process.on('SIGINT', () => process.exit(0));
-process.on('SIGHUP', () => process.exit(0));
+process.on('SIGINT', function () { process.exit(0); });
+process.on('SIGHUP', function () { process.exit(0); });
