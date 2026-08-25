@@ -12,20 +12,6 @@ const distDir = isPkg
   ? path.join(path.dirname(process.execPath), 'dist')
   : path.join(__dirname, 'dist');
 
-// Log to file so we can debug when console is hidden
-const logFile = isPkg
-  ? path.join(path.dirname(process.execPath), 'tagflix.log')
-  : path.join(__dirname, 'tagflix.log');
-function log(msg) {
-  const line = `[${new Date().toISOString()}] ${msg}\n`;
-  try { fs.appendFileSync(logFile, line); } catch (e) {}
-  try { console.log(msg); } catch (e) {}
-}
-
-log('[tagflix] starting...');
-log(`[tagflix] distDir=${distDir}`);
-log(`[tagflix] distDir exists=${fs.existsSync(distDir)}`);
-
 const MIME = {
   '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css',
   '.svg': 'image/svg+xml', '.json': 'application/json',
@@ -47,7 +33,6 @@ const server = http.createServer((req, res) => {
     res.setHeader('Content-Type', MIME[ext] || 'application/octet-stream');
     fs.createReadStream(filePath).pipe(res);
   } catch (err) {
-    log(`[tagflix] request error: ${err.message}`);
     res.statusCode = 500;
     res.end('Internal Server Error');
   }
@@ -64,7 +49,6 @@ function findBrowserPath() {
       path.join(process.env['PROGRAMFILES'] || '', 'BraveSoftware', 'Brave-Browser', 'Application', 'brave.exe'),
     ];
     for (const p of candidates) {
-      log(`[tagflix] checking: ${p} → ${fs.existsSync(p)}`);
       if (fs.existsSync(p)) return p;
     }
   }
@@ -73,16 +57,10 @@ function findBrowserPath() {
 
 server.listen(PORT, '127.0.0.1', () => {
   const targetUrl = `http://127.0.0.1:${PORT}`;
-  log(`[tagflix] server running at ${targetUrl}`);
-
   const browserPath = findBrowserPath();
 
   if (browserPath) {
-    // Separate user-data-dir forces a new Edge instance that respects
-    // --app and --window-size. Without this, Edge absorbs into the
-    // existing instance and ignores window flags.
     const profileDir = path.join(os.tmpdir(), 'tagflix-browser');
-    log(`[tagflix] launching ${browserPath} (profile: ${profileDir})...`);
 
     setTimeout(() => {
       const browser = spawn(browserPath, [
@@ -92,15 +70,17 @@ server.listen(PORT, '127.0.0.1', () => {
         `--user-data-dir=${profileDir}`,
       ], { detached: true, stdio: 'ignore' });
 
-      log(`[tagflix] browser pid=${browser.pid}`);
       browser.unref();
 
-      browser.on('error', (err) => {
-        log(`[tagflix] browser error: ${err.message}`);
+      // When the browser window closes, shut down the server
+      browser.on('close', () => {
+        process.exit(0);
+      });
+
+      browser.on('error', () => {
+        process.exit(1);
       });
     }, 500);
-  } else {
-    log(`[tagflix] no browser found — open ${targetUrl} manually`);
   }
 });
 
