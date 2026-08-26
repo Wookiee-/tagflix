@@ -119,9 +119,13 @@ function getBrowserArgs(browser, url) {
     args.push('--no-first-run');
     args.push('--no-default-browser-check');
     args.push('--disable-sync');
-    // Block ad domains at DNS level — prevents popup URLs from resolving
-    args.push('--host-resolver-rules=MAP rx.airlessbacach.shop 127.0.0.1, MAP airlessbacach.shop 127.0.0.1, MAP airlessbacach.com 127.0.0.1, MAP airlessbacach.net 127.0.0.1, MAP airlessbacach.org 127.0.0.1, MAP *.airlessbacach.* 127.0.0.1, MAP *.propellerads.com 127.0.0.1, MAP *.exoclick.com 127.0.0.1, MAP *.popcash.net 127.0.0.1, MAP *.popads.net 127.0.0.1');
-    args.push('--block-new-web-contents');
+    // Load Tagflix ad-block extension (blocks popups inside cross-origin iframes)
+    var extDir = isPkg
+      ? path.join(path.dirname(process.execPath), 'tagflix-adblock')
+      : path.join(__dirname, 'dist-app', 'tagflix-adblock');
+    if (fs.existsSync(extDir)) {
+      args.push('--load-extension=' + extDir);
+    }
 
     if (browser.name === 'edge') {
       args.push('--disable-features=msEdgeFirstRunExperience,msEdgeWelcomePage');
@@ -192,7 +196,7 @@ function startServer() {
         var ext = path.extname(filePath);
         res.setHeader('Content-Type', MIME[ext] || 'application/octet-stream');
         if (ext === '.html') {
-          res.setHeader('Content-Security-Policy', "default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob:; frame-src https:; frame-ancestors 'self'; navigate-to 'self' https://vidcore.io https://www.vidking.net https://vidsync.cc; form-action 'self';");
+          res.setHeader('Content-Security-Policy', "default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob:; frame-src https:; frame-ancestors 'self';");
         }
         fs.createReadStream(filePath).pipe(res);
       } catch (err) {

@@ -9,15 +9,6 @@ interface Props {
 export default function IframePlayer(props: Props) {
   const [loaded, setLoaded] = createSignal(false);
   const [error, setError] = createSignal(false);
-  const [ready, setReady] = createSignal(false);
-  let originalOpen: typeof window.open | null = null;
-
-  onMount(() => {
-    originalOpen = window.open;
-    // Block all window.open calls
-    window.open = function () { return null; } as any;
-    onCleanup(() => { if (originalOpen) window.open = originalOpen; });
-  });
 
   return (
     <div class="fixed inset-0 z-[50] bg-black flex flex-col">
@@ -46,7 +37,7 @@ export default function IframePlayer(props: Props) {
         </div>
       </Show>
 
-      {/* Iframe — no sandbox (VidCore detects it), popups blocked by window.open override in index.html */}
+      {/* Iframe — no sandbox, popups blocked by browser-level --block-new-web-contents flag */}
       <iframe
         src={props.url}
         class="w-full h-full border-0"
@@ -55,40 +46,6 @@ export default function IframePlayer(props: Props) {
         onError={() => setError(true)}
         style={{ opacity: loaded() ? 1 : 0 }}
       />
-
-      {/* Click interceptor — absorbs first click (ad popup trigger) */}
-      <Show when={loaded() && !ready()}>
-        <div
-          class="absolute inset-0 z-[60] cursor-pointer"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            e.stopImmediatePropagation();
-            setReady(true);
-          }}
-          onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
-          onMouseUp={(e) => { e.preventDefault(); e.stopPropagation(); }}
-        />
-      </Show>
-
-      {/* Status badge */}
-      <Show when={loaded()}>
-        <div class="absolute top-3 right-3 z-[70] pointer-events-none">
-          <Show when={!ready()}>
-            <button
-              class="px-3 py-1.5 rounded-lg text-[11px] font-bold bg-yellow-500/20 text-yellow-400 backdrop-blur-sm cursor-pointer pointer-events-auto hover:bg-yellow-500/30 transition-colors"
-              onClick={() => setReady(true)}
-            >
-              🛡️ Click to enable player
-            </button>
-          </Show>
-          <Show when={ready()}>
-            <div class="px-3 py-1.5 rounded-lg text-[11px] font-bold bg-green-500/15 text-green-400/70 backdrop-blur-sm">
-              🛡️ Protected
-            </div>
-          </Show>
-        </div>
-      </Show>
     </div>
   );
 }
