@@ -47,7 +47,7 @@ export default function MediaRow(props: Props) {
           </div>
         }
       >
-        <div class="flex gap-3 md:gap-4 px-4 md:px-8 overflow-x-auto pb-3 scroll-smooth" style={{ 'touch-action': 'pan-x' }}>
+        <div class="flex gap-3 md:gap-4 px-4 md:px-8 overflow-x-auto pb-3 scroll-smooth" style={{ 'touch-action': 'manipulation' }}>
           <For each={props.items}>
             {(item) => <MediaCard item={item} size={props.size} />}
           </For>

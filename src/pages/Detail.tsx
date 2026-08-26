@@ -318,7 +318,7 @@ export default function DetailPage() {
                 <Show when={topCast().length > 0}>
                   <div class="mt-6 md:mt-8">
                     <h3 class="text-xs font-bold mb-4 uppercase tracking-widest text-white/30">Cast</h3>
-                    <div class="flex gap-2 overflow-x-auto pb-3" style={{ "touch-action": "pan-x" }}>
+                    <div class="flex gap-2 overflow-x-auto pb-3" style={{ "touch-action": "manipulation" }}>
                       <For each={topCast()}>
                         {(actor) => <ActorCard actor={actor} />}
                       </For>
@@ -355,7 +355,7 @@ export default function DetailPage() {
                     </Show>
 
                     {/* Horizontal episode cards */}
-                    <div class="flex gap-3 overflow-x-auto pb-3" style={{ "touch-action": "pan-x" }}>
+                    <div class="flex gap-3 overflow-x-auto pb-3" style={{ "touch-action": "manipulation" }}>
                       <For each={episodes()}>
                         {(ep) => (
                           <button
@@ -400,7 +400,7 @@ export default function DetailPage() {
                 <Show when={similar() && similar()!.length > 0}>
                   <div class="mt-10">
                     <h3 class="text-xs font-bold mb-4 uppercase tracking-widest text-white/30">More Like This</h3>
-                    <div class="flex gap-3 overflow-x-auto pb-3" style={{ "touch-action": "pan-x" }}>
+                    <div class="flex gap-3 overflow-x-auto pb-3" style={{ "touch-action": "manipulation" }}>
                       <For each={similar()!.slice(0, 12)}>
                         {(item) => <SimilarCard item={item} />}
                       </For>

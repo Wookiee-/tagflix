@@ -309,9 +309,9 @@ button {
   display: none;
 }
 
-/* ═══ Touch: allow horizontal scroll but pass taps through ═══ */
+/* ═══ Touch: allow scroll in both directions but pass taps through ═══ */
 .overflow-x-auto {
-  touch-action: pan-x;
+  touch-action: manipulation;
   -webkit-overflow-scrolling: touch;
 }
 

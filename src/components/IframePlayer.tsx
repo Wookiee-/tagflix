@@ -1,7 +1,13 @@
 import { createSignal, Show, onMount, onCleanup } from 'solid-js';
-import { Capacitor } from '@capacitor/core';
-import { Browser } from '@capacitor/browser';
+import { Capacitor, registerPlugin } from '@capacitor/core';
 import { App } from '@capacitor/app';
+
+interface TagflixBrowserPlugin {
+  open(options: { url: string; toolbarColor?: string }): Promise<{ opened: boolean }>;
+}
+
+/** Local Android plugin — opens a Chrome Custom Tab in immersive fullscreen */
+const TagflixBrowser = registerPlugin<TagflixBrowserPlugin>('TagflixBrowser');
 
 interface Props {
   url: string;
@@ -59,10 +65,9 @@ export default function IframePlayer(props: Props) {
         }
       });
 
-      // Open in system browser — fullscreen works, Back button closes it
-      await Browser.open({
+      // Open Chrome Custom Tab in immersive fullscreen (hardware-accelerated)
+      await TagflixBrowser.open({
         url: props.url,
-        presentationStyle: 'popover',
         toolbarColor: '#0c0b11',
       });
 
@@ -72,10 +77,8 @@ export default function IframePlayer(props: Props) {
     }
   }
 
-  async function closeBrowser() {
-    try {
-      await Browser.close();
-    } catch (e) {}
+  function closeBrowser() {
+    // Custom tab covers the app, so this is only hit from the error state
     setBrowserOpen(false);
     props.onBack?.();
   }

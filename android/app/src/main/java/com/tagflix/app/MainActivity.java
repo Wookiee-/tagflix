@@ -23,6 +23,9 @@ public class MainActivity extends BridgeActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        // Register local plugins BEFORE Capacitor initializes
+        registerPlugin(TagflixBrowserPlugin.class);
+
         // TV/Firestick: force landscape. Phone: allow free rotation
         if (isTvDevice()) {
             setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
