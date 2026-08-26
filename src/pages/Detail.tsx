@@ -155,7 +155,7 @@ export default function DetailPage() {
         sourceId: source.id,
         sourceIds: SOURCES.map(s => s.id),
         episodes: isTv() ? episodes() : undefined,
-        seasons: isTv() ? tvData().seasons?.filter(s => s.season_number > 0) : undefined,
+        seasons: isTv() ? ((detail() as any)?.seasons?.filter((s: any) => s.season_number > 0)) : undefined,
         activeSeason: isTv() ? activeSeason() : undefined,
       },
     });
@@ -178,7 +178,7 @@ export default function DetailPage() {
         sourceId: source.id,
         sourceIds: SOURCES.map(s => s.id),
         episodes: episodes(),
-        seasons: tvData().seasons?.filter(s => s.season_number > 0),
+        seasons: ((detail() as any)?.seasons?.filter((s: any) => s.season_number > 0)),
         activeSeason: activeSeason(),
       },
     });
