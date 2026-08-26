@@ -51,15 +51,13 @@ export default function IframePlayer(props: Props) {
 
       const { id } = await InAppBrowser.openWebView({
         url: props.url,
-        // Full screen inside the app
-        toolbar: true,
-        toolbarColor: '#0c0b11',
-        showTitle: true,
-        title: props.title || 'Tagflix Player',
-        // Close button behavior — destroy webview on close
+        // No toolbar — VidCore has its own controls
+        toolbarType: 'blank' as any,
+        // Fullscreen — extend behind status bar
+        enabledSafeTopMargin: false,
+        enabledSafeBottomMargin: false,
+        // Close button behavior
         closeAction: 'close' as any,
-        // Enable popups (VidCore needs this for fullscreen)
-        handlePopups: true,
       });
 
       // Listen for close event
