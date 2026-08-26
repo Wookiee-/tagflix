@@ -1,6 +1,6 @@
 import { createSignal, For, Show } from 'solid-js';
 import {
-  Palette, Paintbrush, Globe, MonitorPlay, Sparkles, Trash2, ChevronRight,
+  Palette, Paintbrush, Globe, MonitorPlay, Sparkles, Trash2,
 } from 'lucide-solid';
 import {
   getAccentColor, setAccentColor, getSkin, setSkin,
@@ -64,171 +64,218 @@ function applySkin(skinId: string) {
   r.style.setProperty('--text', s.text);
 }
 
+/* ═══ Radio Group ═══ */
+function RadioGroup<T extends string>(props: {
+  value: T;
+  options: { id: T; label: string; description?: string; preview?: any }[];
+  onChange: (v: T) => void;
+}) {
+  return (
+    <div class="flex flex-col gap-2">
+      <For each={props.options}>
+        {(opt) => {
+          const selected = () => props.value === opt.id;
+          return (
+            <button
+              class="flex items-center gap-3 p-3 rounded-xl transition-all duration-200 text-left"
+              style={{
+                background: selected() ? 'rgba(255,255,255,0.06)' : 'transparent',
+                border: selected() ? '1px solid var(--accent)' : '1px solid rgba(255,255,255,0.06)',
+              }}
+              onClick={() => props.onChange(opt.id)}
+            >
+              {/* Radio circle */}
+              <div
+                class="w-5 h-5 rounded-full shrink-0 flex items-center justify-center transition-all duration-200"
+                style={{
+                  border: selected() ? '2px solid var(--accent)' : '2px solid rgba(255,255,255,0.2)',
+                  background: selected() ? 'var(--accent)' : 'transparent',
+                  'box-shadow': selected() ? '0 0 12px var(--accent-glow)' : 'none',
+                }}
+              >
+                <Show when={selected()}>
+                  <div class="w-2 h-2 rounded-full bg-white" />
+                </Show>
+              </div>
+              {/* Preview + text */}
+              <Show when={opt.preview}>
+                <div class="shrink-0">{opt.preview}</div>
+              </Show>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-semibold" style={{ color: selected() ? 'white' : 'var(--text)' }}>
+                  {opt.label}
+                </p>
+                <Show when={opt.description}>
+                  <p class="text-xs text-white/30 mt-0.5">{opt.description}</p>
+                </Show>
+              </div>
+            </button>
+          );
+        }}
+      </For>
+    </div>
+  );
+}
+
+/* ═══ Toggle Switch ═══ */
+function Toggle(props: { value: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <button
+      class="w-11 h-6 rounded-full transition-all duration-200 relative shrink-0"
+      style={{
+        background: props.value ? 'var(--accent)' : 'rgba(255,255,255,0.12)',
+        'box-shadow': props.value ? '0 0 12px var(--accent-glow)' : 'none',
+      }}
+      onClick={() => props.onChange(!props.value)}
+    >
+      <div
+        class="w-4 h-4 rounded-full bg-white absolute top-1 transition-transform duration-200 shadow-md"
+        style={{ left: props.value ? '24px' : '4px' }}
+      />
+    </button>
+  );
+}
+
 export default function SettingsPage() {
-  const [accent, setAccent] = createSignal(getAccentColor());
+  const [accent, setAccentState] = createSignal(getAccentColor());
   const [skin, setSkinState] = createSignal(getSkin());
   const [source, setSourceState] = createSignal(getActiveSource());
   const [autoplay, setAutoplayState] = createSignal(getAutoplayNext());
 
   return (
-    <div class="p-4 md:p-8 pb-24 animate-fade-in max-w-3xl mx-auto">
+    <div class="p-6 md:p-10 pb-24 animate-fade-in max-w-2xl mx-auto">
       {/* Header */}
-      <div class="mb-8">
-        <h1 class="text-2xl md:text-3xl font-black tracking-tight" style={{ color: 'var(--text-white)' }}>Settings</h1>
+      <div class="mb-10 text-center">
+        <h1 class="text-3xl md:text-4xl font-black tracking-tight" style={{ color: 'var(--text-white)' }}>Settings</h1>
         <p class="text-sm mt-2 text-white/35">Customize your experience</p>
       </div>
 
-      {/* Accent Colour */}
-      <div class="mb-8">
-        <div class="flex items-center gap-3 mb-4">
-          <div class="w-9 h-9 rounded-xl flex items-center justify-center glass-card">
-            <Palette size={18} style={{ color: 'var(--accent)' }} />
+      {/* ═══ Accent Colour ═══ */}
+      <div class="mb-10">
+        <div class="flex items-center gap-3 mb-5">
+          <div class="w-10 h-10 rounded-xl flex items-center justify-center glass-card">
+            <Palette size={20} style={{ color: 'var(--accent)' }} />
           </div>
           <div>
-            <h2 class="text-sm font-bold" style={{ color: 'var(--text-white)' }}>Accent Colour</h2>
+            <h2 class="text-base font-bold" style={{ color: 'var(--text-white)' }}>Accent Colour</h2>
             <p class="text-xs text-white/30">Choose a colour that reflects your style</p>
           </div>
         </div>
-        <div class="flex gap-4 flex-wrap pl-12">
+        {/* Accent circle grid */}
+        <div class="flex gap-4 flex-wrap justify-center mb-4">
           <For each={ACCENTS}>
             {(a) => (
               <button
-                class="w-10 h-10 rounded-full transition-all duration-200 hover:scale-110"
+                class="w-11 h-11 rounded-full transition-all duration-200 hover:scale-110"
                 style={{
                   background: a.id,
                   'box-shadow': accent() === a.id
-                    ? `0 0 0 3px var(--bg), 0 0 0 5px ${a.id}, 0 4px 16px ${a.id}50`
-                    : '0 2px 8px rgba(0,0,0,0.4)',
+                    ? `0 0 0 3px var(--bg), 0 0 0 5px ${a.id}, 0 4px 20px ${a.id}60`
+                    : '0 2px 10px rgba(0,0,0,0.4)',
                 }}
-                onClick={() => { setAccent(a.id); applyAccent(a.id); }}
+                onClick={() => { setAccentState(a.id); applyAccent(a.id); }}
                 title={a.name}
               />
             )}
           </For>
         </div>
+        <p class="text-center text-xs text-white/25">
+          {ACCENTS.find(a => a.id === accent())?.name || 'Blue'}
+        </p>
       </div>
 
-      {/* Skin */}
-      <div class="mb-8">
-        <div class="flex items-center gap-3 mb-4">
-          <div class="w-9 h-9 rounded-xl flex items-center justify-center glass-card">
-            <Paintbrush size={18} style={{ color: 'var(--accent)' }} />
+      {/* ═══ Skin ═══ */}
+      <div class="mb-10">
+        <div class="flex items-center gap-3 mb-5">
+          <div class="w-10 h-10 rounded-xl flex items-center justify-center glass-card">
+            <Paintbrush size={20} style={{ color: 'var(--accent)' }} />
           </div>
           <div>
-            <h2 class="text-sm font-bold" style={{ color: 'var(--text-white)' }}>Skin</h2>
+            <h2 class="text-base font-bold" style={{ color: 'var(--text-white)' }}>Skin</h2>
             <p class="text-xs text-white/30">Pick a theme for the interface</p>
           </div>
         </div>
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 pl-12">
-          <For each={SKINS}>
-            {(s) => (
-              <button
-                class="p-4 rounded-xl text-left transition-all duration-200 hover:scale-[1.02]"
-                style={{
-                  background: skin() === s.id ? 'var(--accent)' : s.surface,
-                  border: skin() === s.id ? 'none' : '1px solid rgba(255,255,255,0.06)',
-                  'box-shadow': skin() === s.id ? '0 4px 16px var(--accent-glow)' : '0 2px 8px rgba(0,0,0,0.2)',
-                }}
-                onClick={() => { setSkinState(s.id); applySkin(s.id); }}
-              >
-                <div class="flex gap-2 mb-3">
-                  <div class="w-5 h-5 rounded-md" style={{ background: s.bg }} />
-                  <div class="w-5 h-5 rounded-md" style={{ background: s.surface }} />
-                  <div class="w-5 h-5 rounded-md" style={{ background: skin() === s.id ? 'rgba(255,255,255,0.3)' : 'var(--accent)' }} />
-                </div>
-                <span class="text-sm font-bold" style={{ color: skin() === s.id ? 'white' : 'var(--text)' }}>
-                  {s.name}
-                </span>
-              </button>
-            )}
-          </For>
-        </div>
+        <RadioGroup
+          value={skin()}
+          options={SKINS.map(s => ({
+            id: s.id,
+            label: s.name,
+            description: s.id === 'dark' ? 'Default dark theme' : s.id === 'oled' ? 'True black for OLED screens' : '',
+            preview: (
+              <div class="flex gap-1.5">
+                <div class="w-5 h-5 rounded" style={{ background: s.bg, border: '1px solid rgba(255,255,255,0.1)' }} />
+                <div class="w-5 h-5 rounded" style={{ background: s.surface, border: '1px solid rgba(255,255,255,0.1)' }} />
+              </div>
+            ),
+          }))}
+          onChange={(id) => { setSkinState(id); applySkin(id); }}
+        />
       </div>
 
-      {/* Streaming Source */}
-      <div class="mb-8">
-        <div class="flex items-center gap-3 mb-4">
-          <div class="w-9 h-9 rounded-xl flex items-center justify-center glass-card">
-            <Globe size={18} style={{ color: 'var(--accent)' }} />
+      {/* ═══ Streaming Source ═══ */}
+      <div class="mb-10">
+        <div class="flex items-center gap-3 mb-5">
+          <div class="w-10 h-10 rounded-xl flex items-center justify-center glass-card">
+            <Globe size={20} style={{ color: 'var(--accent)' }} />
           </div>
           <div>
-            <h2 class="text-sm font-bold" style={{ color: 'var(--text-white)' }}>Streaming Source</h2>
+            <h2 class="text-base font-bold" style={{ color: 'var(--text-white)' }}>Streaming Source</h2>
             <p class="text-xs text-white/30">Choose which source to use first</p>
           </div>
         </div>
-        <div class="flex gap-2 flex-wrap pl-12">
-          <For each={SOURCES}>
-            {(s) => (
-              <button
-                class="px-5 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 glass-card"
-                style={{
-                  background: source() === s.id ? 'var(--accent)' : undefined,
-                  color: source() === s.id ? 'white' : 'var(--text)',
-                  'box-shadow': source() === s.id ? '0 2px 12px var(--accent-glow)' : undefined,
-                }}
-                onClick={() => { setSourceState(s.id); setActiveSource(s.id); }}
-              >
-                {s.name}
-              </button>
-            )}
-          </For>
-        </div>
+        <RadioGroup
+          value={source()}
+          options={SOURCES.map(s => ({
+            id: s.id,
+            label: s.name,
+            description: s.id === 'vidcore' ? 'Default — fast and reliable' : 'Alternative source',
+          }))}
+          onChange={(id) => { setSourceState(id); setActiveSource(id); }}
+        />
       </div>
 
-      {/* Player */}
-      <div class="mb-8">
-        <div class="flex items-center gap-3 mb-4">
-          <div class="w-9 h-9 rounded-xl flex items-center justify-center glass-card">
-            <MonitorPlay size={18} style={{ color: 'var(--accent)' }} />
+      {/* ═══ Player ═══ */}
+      <div class="mb-10">
+        <div class="flex items-center gap-3 mb-5">
+          <div class="w-10 h-10 rounded-xl flex items-center justify-center glass-card">
+            <MonitorPlay size={20} style={{ color: 'var(--accent)' }} />
           </div>
           <div>
-            <h2 class="text-sm font-bold" style={{ color: 'var(--text-white)' }}>Player</h2>
+            <h2 class="text-base font-bold" style={{ color: 'var(--text-white)' }}>Player</h2>
             <p class="text-xs text-white/30">Playback preferences</p>
           </div>
         </div>
-        <div class="glass-card p-4 flex items-center justify-between ml-12">
+        <div class="glass-card p-4 flex items-center justify-between">
           <div>
             <p class="text-sm font-semibold" style={{ color: 'var(--text-white)' }}>Autoplay next episode</p>
             <p class="text-xs text-white/35 mt-1">Play the next episode automatically</p>
           </div>
-          <button
-            class="w-12 h-7 rounded-full transition-all duration-200 relative shrink-0"
-            style={{
-              background: autoplay() ? 'var(--accent)' : 'rgba(255,255,255,0.12)',
-              'box-shadow': autoplay() ? '0 2px 12px var(--accent-glow)' : 'none',
-            }}
-            onClick={() => { const v = !autoplay(); setAutoplayState(v); setAutoplayNext(v); }}
-          >
-            <div
-              class="w-5 h-5 rounded-full bg-white absolute top-1 transition-transform duration-200 shadow-md"
-              style={{ left: autoplay() ? '26px' : '4px' }}
-            />
-          </button>
+          <Toggle value={autoplay()} onChange={(v) => { setAutoplayState(v); setAutoplayNext(v); }} />
         </div>
       </div>
 
-      {/* Data */}
-      <div class="mb-8">
-        <div class="flex items-center gap-3 mb-4">
-          <div class="w-9 h-9 rounded-xl flex items-center justify-center glass-card">
-            <Trash2 size={18} class="text-red-400" />
+      {/* ═══ Data ═══ */}
+      <div class="mb-10">
+        <div class="flex items-center gap-3 mb-5">
+          <div class="w-10 h-10 rounded-xl flex items-center justify-center glass-card">
+            <Trash2 size={20} class="text-red-400" />
           </div>
           <div>
-            <h2 class="text-sm font-bold" style={{ color: 'var(--text-white)' }}>Data</h2>
+            <h2 class="text-base font-bold" style={{ color: 'var(--text-white)' }}>Data</h2>
             <p class="text-xs text-white/30">Manage your local data</p>
           </div>
         </div>
-        <div class="glass-card p-4 flex items-center justify-between ml-12">
+        <div class="glass-card p-4 flex items-center justify-between">
           <div>
             <p class="text-sm font-semibold" style={{ color: 'var(--text-white)' }}>Clear Continue Watching</p>
             <p class="text-xs text-white/35 mt-1">Remove all continue watching entries</p>
           </div>
           <button
-            class="px-4 py-2 rounded-lg text-sm font-bold transition-all hover:brightness-110 shrink-0"
+            class="px-5 py-2 rounded-lg text-sm font-bold transition-all hover:brightness-110 shrink-0"
             style={{
               background: 'rgba(239, 68, 68, 0.12)',
               color: '#ef4444',
-              border: '1px solid rgba(239, 68, 68, 0.15)',
+              border: '1px solid rgba(239, 68, 68, 0.2)',
             }}
             onClick={() => { clearAllContinueWatching(); }}
           >
@@ -237,18 +284,18 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* About */}
-      <div class="mb-8">
-        <div class="flex items-center gap-3 mb-4">
-          <div class="w-9 h-9 rounded-xl flex items-center justify-center glass-card">
-            <Sparkles size={18} style={{ color: 'var(--accent)' }} />
+      {/* ═══ About ═══ */}
+      <div class="mb-10">
+        <div class="flex items-center gap-3 mb-5">
+          <div class="w-10 h-10 rounded-xl flex items-center justify-center glass-card">
+            <Sparkles size={20} style={{ color: 'var(--accent)' }} />
           </div>
           <div>
-            <h2 class="text-sm font-bold" style={{ color: 'var(--text-white)' }}>About</h2>
+            <h2 class="text-base font-bold" style={{ color: 'var(--text-white)' }}>About</h2>
             <p class="text-xs text-white/30">App information</p>
           </div>
         </div>
-        <div class="glass-card p-4 flex items-center justify-between ml-12">
+        <div class="glass-card p-4 flex items-center justify-between">
           <div>
             <p class="text-sm font-bold" style={{ color: 'var(--text-white)' }}>Tagflix v2.0</p>
             <p class="text-xs text-white/35 mt-1">SolidJS • Built for streaming</p>
