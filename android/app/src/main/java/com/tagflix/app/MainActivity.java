@@ -92,6 +92,16 @@ public class MainActivity extends BridgeActivity {
     }
 
     @Override
+    public void onTrimMemory(int level) {
+        super.onTrimMemory(level);
+        // Clear WebView cache on low memory to free RAM for video playback
+        WebView webView = getBridge().getWebView();
+        if (webView != null && level >= TRIM_MEMORY_RUNNING_LOW) {
+            webView.clearCache(false);
+        }
+    }
+
+    @Override
     public void onConfigurationChanged(Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
     }

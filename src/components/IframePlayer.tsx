@@ -30,8 +30,8 @@ export default function IframePlayer(props: Props) {
   });
 
   return (
-    <div class="fixed inset-0 z-[50] bg-black flex flex-col">
-      {/* Loading */}
+    <div class="fixed inset-0 z-[50] bg-black" style={{ 'will-change': 'transform, opacity', 'transform': 'translateZ(0)', 'backface-visibility': 'hidden' }}>
+      {/* Loading — fully unmounts once loaded to free GPU memory */}
       <Show when={!loaded()}>
         <div class="absolute inset-0 flex flex-col items-center justify-center z-10 bg-black">
           <div
@@ -61,7 +61,7 @@ export default function IframePlayer(props: Props) {
         </div>
       </Show>
 
-      {/* Iframe — no sandbox, popups blocked by window.open override */}
+      {/* Iframe on its own GPU layer for faster rendering */}
       <iframe
         src={props.url}
         class="w-full h-full border-0"
@@ -70,7 +70,7 @@ export default function IframePlayer(props: Props) {
         loading="eager"
         onLoad={() => setLoaded(true)}
         onError={() => setError(true)}
-        style={{ opacity: loaded() ? 1 : 0, background: 'black' }}
+        style={{ opacity: loaded() ? 1 : 0, background: 'black', 'will-change': 'transform', 'transform': 'translateZ(0)', 'backface-visibility': 'hidden' }}
       />
     </div>
   );
