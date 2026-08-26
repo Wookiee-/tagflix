@@ -103,7 +103,7 @@ function getBrowserArgs(browser, url, extDir) {
     args.push('--disable-session-crashed-bubble');
     args.push('--disable-sync');
 
-    // Load ad-block extension — works with --user-data-dir when both flags are set
+    // Load ad-block extension (no --user-data-dir so extension loads)
     if (extDir && fs.existsSync(extDir)) {
       args.push('--load-extension=' + extDir);
       args.push('--disable-extensions-except=' + extDir);
@@ -125,14 +125,13 @@ function openBrowser(url) {
   var browser = findBrowser();
   if (!browser) return;
 
-  // Extension directory
   var extDir = isPkg
     ? path.join(path.dirname(process.execPath), 'tagflix-adblock')
     : path.join(__dirname, 'dist-app', 'tagflix-adblock');
 
-  var profileDir = path.join(os.homedir(), '.tagflix', browser.name + '-profile');
   var args = getBrowserArgs(browser, url, extDir);
 
+  // Firefox profile setup
   if (browser.engine === 'gecko') {
     var profilesDir = path.join(os.homedir(), '.tagflix', 'firefox-profiles');
     var tagflixProfile = path.join(profilesDir, 'tagflix');
@@ -151,29 +150,13 @@ function openBrowser(url) {
         'pref("general.config.sandbox_enabled", false);\n'
       );
       fs.writeFileSync(path.join(tagflixProfile, 'tagflix-block.js'),
-        'try {\n' +
-        '  var _origOpen = window.open;\n' +
-        '  window.open = function() { return null; };\n' +
-        '} catch(e) {}\n' +
-        'try {\n' +
-        '  lockPref("dom.popup_allowed_events", "");\n' +
-        '  lockPref("dom.disable_open_during_load", true);\n' +
-        '  lockPref("privacy.trackingprotection.enabled", true);\n' +
-        '} catch(e) {}\n'
+        'try {\n  window.open = function() { return null; };\n} catch(e) {}\n' +
+        'try {\n  lockPref("dom.popup_allowed_events", "");\n' +
+        '  lockPref("dom.disable_open_during_load", true);\n} catch(e) {}\n'
       );
     } catch (e) {}
     args.push('-Profile');
     args.push(tagflixProfile);
-  } else {
-    // Delete old profile so extension loads fresh (avoids cached disabled state)
-    try {
-      var extensionsDir = path.join(profileDir, 'Default', 'Extensions');
-      if (!fs.existsSync(extensionsDir)) {
-        // Fresh profile needed — force by deleting
-        fs.rmSync(profileDir, { recursive: true, force: true });
-      }
-    } catch (e) {}
-    args.push('--user-data-dir=' + profileDir);
   }
 
   var proc = spawn(browser.path, args, {

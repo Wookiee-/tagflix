@@ -34,6 +34,8 @@
             postMessage: function(){},
           };
         };
+        // Force landscape window size (works in --app mode)
+        try { window.resizeTo(1280, 720); } catch(e) {}
         // Also prevent beforeunload-based popups
         window.addEventListener('beforeunload', function(e) { e.preventDefault(); });
         // Block onclick-based popups via event listener removal
