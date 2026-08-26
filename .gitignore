@@ -4,6 +4,7 @@ dist-app/
 release/
 android/
 ios/
+installer/
 .env
 *.log
 thumbs.db
