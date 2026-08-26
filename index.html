@@ -20,9 +20,33 @@
     </style>
     <!-- Block all popups from iframes (VidCore ads) -->
     <script>
-      window.open = function () {
-        return { focus: function(){}, blur: function(){}, close: function(){}, closed: false };
-      };
+      (function() {
+        // Override window.open globally — returns dummy object so scripts don't crash
+        window.open = function(url, target, features) {
+          console.warn('[Tagflix] Blocked popup:', url);
+          return {
+            focus: function(){},
+            blur: function(){},
+            close: function(){},
+            closed: false,
+            location: { href: '' },
+            document: { write: function(){}, writeln: function(){} },
+            postMessage: function(){},
+          };
+        };
+        // Also prevent beforeunload-based popups
+        window.addEventListener('beforeunload', function(e) { e.preventDefault(); });
+        // Block onclick-based popups via event listener removal
+        document.addEventListener('click', function(e) {
+          if (e.target && (e.target.tagName === 'A' || e.target.closest('a'))) {
+            var a = e.target.tagName === 'A' ? e.target : e.target.closest('a');
+            if (a && a.target === '_blank') {
+              e.preventDefault();
+              e.stopPropagation();
+            }
+          }
+        }, true);
+      })();
     </script>
   </head>
   <body>
