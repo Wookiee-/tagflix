@@ -49,18 +49,20 @@ export default function IframePlayer(props: Props) {
     try {
       setBrowserOpen(true);
 
-      const { id } = await InAppBrowser.openWebView({
+      // Use open() — Chrome Custom Tab handles fullscreen properly
+      await InAppBrowser.open({
         url: props.url,
-        // No toolbar — VidCore has its own controls
-        toolbarType: 'blank' as any,
-        // Fullscreen — extend behind status bar
-        enabledSafeTopMargin: false,
-        enabledSafeBottomMargin: false,
-        // Close button behavior
-        closeAction: 'close' as any,
+        toolbarColor: '#0c0b11',
+        showTitle: true,
+        // Back arrow instead of X — feels more natural
+        showArrow: true,
+        // Auto-hide URL bar on scroll
+        urlBarHidingEnabled: true,
+        // Don't open deep links
+        preventDeeplink: true,
       });
 
-      // Listen for close event
+      // Listen for when user taps back/close
       closeHandle = await InAppBrowser.addListener('closeEvent', () => {
         setBrowserOpen(false);
         if (closeHandle) closeHandle.remove();
@@ -102,7 +104,7 @@ export default function IframePlayer(props: Props) {
               Playing in browser
             </p>
             <p class="text-xs mb-6" style={{ color: 'var(--text)', opacity: 0.5 }}>
-              Tap X to return to Tagflix
+              Tap ← to return to Tagflix
             </p>
             <button
               class="px-6 py-2.5 rounded-lg font-semibold text-sm text-white"
