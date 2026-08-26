@@ -2,7 +2,16 @@ node_modules/
 dist/
 dist-app/
 release/
-android/
+# Android build artifacts (keep custom source files)
+android/build/
+android/app/build/
+android/.gradle/
+android/capacitor-*
+android/gradle/
+android/gradlew
+android/gradlew.bat
+android/local.properties
+android/settings.gradle
 ios/
 installer/
 .env
