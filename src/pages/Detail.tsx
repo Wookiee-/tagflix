@@ -34,8 +34,8 @@ function ActorCard(props: { actor: TMDBCastMember }) {
           />
         </Show>
       </div>
-      <p class="text-[11px] font-bold text-white truncate px-1">{props.actor.name}</p>
-      <p class="text-[10px] text-white/30 truncate mt-0.5 px-1">{props.actor.character}</p>
+      <p class="text-xs font-bold text-white truncate px-1">{props.actor.name}</p>
+      <p class="text-[11px] text-white/40 truncate mt-0.5 px-1">{props.actor.character}</p>
     </div>
   );
 }
@@ -77,10 +77,7 @@ function SimilarCard(props: { item: TMDBMedia }) {
           </div>
         </Show>
       </div>
-      <p class="text-xs font-semibold truncate text-white/80 group-hover:text-white">{mediaTitle(props.item)}</p>
-      <Show when={props.item.overview}>
-        <p class="text-[10px] text-white/30 line-clamp-2 mt-0.5 leading-relaxed">{props.item.overview}</p>
-      </Show>
+      <p class="text-sm font-bold truncate text-white/90 group-hover:text-white">{mediaTitle(props.item)}</p>
     </button>
   );
 }
@@ -299,11 +296,6 @@ export default function DetailPage() {
                         "{tagline()}"
                       </p>
                     </Show>
-
-                    {/* Overview */}
-                    <p class="text-sm leading-relaxed text-white/55 max-w-2xl mb-6">
-                      {data.overview || 'No description available.'}
-                    </p>
 
                     {/* Action buttons */}
                     <div class="flex gap-3 flex-wrap mb-8">
