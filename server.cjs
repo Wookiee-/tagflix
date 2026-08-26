@@ -19,24 +19,7 @@ const MIME = {
   '.ttf': 'font/ttf', '.ico': 'image/x-icon',
 };
 
-// ─── Exit when browser profile is closed ───
-// Chromium locks SingletonLock while running; Firefox locks parent.lock
-function checkBrowserClosed(profileDir, engine) {
-  var lockFile;
-  if (engine === 'gecko') {
-    lockFile = path.join(profileDir, 'parent.lock');
-  } else {
-    lockFile = path.join(profileDir, 'SingletonLock');
-  }
-  // Wait 15s before first check (browser needs time to start)
-  setTimeout(function check() {
-    if (!fs.existsSync(lockFile)) {
-      // Lock released = browser closed
-      process.exit(0);
-    }
-    setTimeout(check, 3000);
-  }, 15000);
-}
+
 
 function findBrowser() {
   var platform = process.platform;
@@ -144,7 +127,6 @@ function openBrowser(url) {
   var browser = findBrowser();
   if (!browser) return;
 
-  var profileDir = path.join(os.homedir(), '.tagflix', browser.name + '-profile');
   var args = getBrowserArgs(browser, url);
 
   if (browser.engine === 'gecko') {
@@ -160,8 +142,6 @@ function openBrowser(url) {
       args.push('-Profile');
       args.push(path.join(profilesDir, 'tagflix'));
     } catch (e) {}
-  } else {
-    args.push('--user-data-dir=' + profileDir);
   }
 
   var proc = spawn(browser.path, args, {
@@ -172,8 +152,10 @@ function openBrowser(url) {
 
   proc.unref();
 
-  // Exit when browser profile is closed
-  checkBrowserClosed(profileDir, browser.engine);
+  // Exit when browser closes
+  proc.on('exit', function () {
+    setTimeout(function () { process.exit(0); }, 2000);
+  });
 }
 
 function startServer() {
@@ -209,7 +191,6 @@ function startServer() {
     server.on('error', function (err) {
       if (err.code === 'EADDRINUSE') {
         openBrowser(targetUrl);
-        setTimeout(checkIdle, 10000);
       }
     });
 
