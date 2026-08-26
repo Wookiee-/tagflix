@@ -96,6 +96,8 @@ function getBrowserArgs(browser, url) {
     args.push('--height=720');
     args.push(url);
   } else {
+    args.push('--new-window');
+    args.push('--window-name=tagflix');
     args.push('--app=' + url);
     args.push('--window-size=1280,720');
     args.push('--window-position=0,0');
