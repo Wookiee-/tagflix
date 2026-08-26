@@ -1,6 +1,6 @@
 import { createSignal, Show, For } from 'solid-js';
 import { useNavigate, useLocation } from '@solidjs/router';
-import { ArrowLeft, MonitorPlay, List } from 'lucide-solid';
+import { ArrowLeft, MonitorPlay, List, ChevronDown } from 'lucide-solid';
 import IframePlayer from '../components/IframePlayer';
 import { SOURCES, getSource } from '../lib/sources';
 import { saveContinueWatching } from '../lib/storage';
@@ -16,7 +16,6 @@ export default function PlayerPage() {
   const [showEpisodes, setShowEpisodes] = createSignal(false);
 
   const handleBack = () => {
-    // Save progress before leaving
     if (state()?.tmdbId) {
       saveContinueWatching({
         key: `${state().tmdbId}:${state().season || 0}:${state().episode || 0}`,
@@ -58,7 +57,6 @@ export default function PlayerPage() {
     setEmbedUrl(url);
     setShowEpisodes(false);
 
-    // Update URL state for episode tracking
     navigate('/player', {
       state: {
         ...s,
@@ -77,8 +75,8 @@ export default function PlayerPage() {
         <IframePlayer url={embedUrl()} title={title()} onBack={handleBack} />
       </Show>
 
-      {/* Overlay controls (top bar) */}
-      <div class="absolute top-0 left-0 right-0 z-[60] flex items-center gap-3 p-4 bg-gradient-to-b from-black/80 to-transparent">
+      {/* Top bar controls */}
+      <div class="absolute top-0 left-0 right-0 z-[60] flex items-center gap-3 p-3 md:p-4 bg-gradient-to-b from-black/80 to-transparent">
         <button
           class="w-10 h-10 rounded-full flex items-center justify-center bg-black/50 backdrop-blur-sm text-white hover:bg-black/70 transition-colors"
           onClick={handleBack}
@@ -104,21 +102,25 @@ export default function PlayerPage() {
         </button>
       </div>
 
-      {/* Source Picker Panel */}
+      {/* Source Picker */}
       <Show when={showSources()}>
         <div
-          class="absolute bottom-0 left-0 right-0 z-[60] p-4 bg-gradient-to-t from-black/90 to-transparent"
+          class="absolute bottom-0 left-0 right-0 z-[60] p-4 bg-gradient-to-t from-black/95 via-black/90 to-transparent"
           onClick={(e) => e.stopPropagation()}
         >
-          <h3 class="text-xs font-bold uppercase tracking-wider opacity-50 mb-3">Source</h3>
+          <div class="flex items-center gap-2 mb-3">
+            <MonitorPlay size={14} style={{ color: 'var(--accent)' }} />
+            <h3 class="text-xs font-bold uppercase tracking-wider text-white/50">Source</h3>
+          </div>
           <div class="flex gap-2 flex-wrap">
             <For each={SOURCES}>
               {(source) => (
                 <button
-                  class="px-4 py-2 rounded-lg text-sm font-semibold transition-all"
+                  class="px-4 py-2.5 rounded-lg text-sm font-semibold transition-all glass-card"
                   style={{
-                    background: state()?.sourceId === source.id ? 'var(--accent)' : 'var(--surface)',
+                    background: state()?.sourceId === source.id ? 'var(--accent)' : undefined,
                     color: state()?.sourceId === source.id ? 'white' : 'var(--text)',
+                    'box-shadow': state()?.sourceId === source.id ? '0 2px 12px var(--accent-glow)' : undefined,
                   }}
                   onClick={() => switchSource(source.id)}
                 >
@@ -130,25 +132,29 @@ export default function PlayerPage() {
         </div>
       </Show>
 
-      {/* Episode Picker Panel */}
+      {/* Episode Picker */}
       <Show when={showEpisodes()}>
         <div
-          class="absolute bottom-0 left-0 right-0 z-[60] max-h-[60vh] overflow-y-auto p-4 bg-gradient-to-t from-black/95 to-transparent"
+          class="absolute bottom-0 left-0 right-0 z-[60] max-h-[60vh] overflow-y-auto p-4 bg-gradient-to-t from-black/95 via-black/90 to-transparent"
           onClick={(e) => e.stopPropagation()}
         >
-          <h3 class="text-xs font-bold uppercase tracking-wider opacity-50 mb-3">
-            Season {state()?.activeSeason || state()?.season || 1} — Episodes
-          </h3>
+          <div class="flex items-center gap-2 mb-3">
+            <List size={14} style={{ color: 'var(--accent)' }} />
+            <h3 class="text-xs font-bold uppercase tracking-wider text-white/50">
+              Season {state()?.activeSeason || state()?.season || 1}
+            </h3>
+          </div>
           <div class="flex flex-col gap-2">
             <For each={state()?.episodes || []}>
               {(ep: any) => {
                 const isCurrent = ep.season_number === state()?.season && ep.episode_number === state()?.episode;
                 return (
                   <button
-                    class="flex gap-3 p-3 rounded-lg text-left transition-colors"
+                    class="flex gap-3 p-3 rounded-xl text-left transition-all glass-card"
                     style={{
-                      background: isCurrent ? 'var(--accent)' : 'var(--surface)',
+                      background: isCurrent ? 'var(--accent)' : undefined,
                       color: isCurrent ? 'white' : 'var(--text)',
+                      'box-shadow': isCurrent ? '0 2px 12px var(--accent-glow)' : undefined,
                     }}
                     onClick={() => playEpisode(ep)}
                   >
@@ -156,7 +162,7 @@ export default function PlayerPage() {
                     <div class="flex-1 min-w-0">
                       <p class="text-sm font-semibold truncate">{ep.name}</p>
                       <Show when={ep.overview}>
-                        <p class="text-xs opacity-60 line-clamp-1 mt-0.5">{ep.overview}</p>
+                        <p class="text-xs opacity-50 line-clamp-1 mt-0.5">{ep.overview}</p>
                       </Show>
                     </div>
                   </button>

@@ -1,6 +1,6 @@
-import { createSignal, For } from 'solid-js';
+import { createSignal, For, Show } from 'solid-js';
 import {
-  Palette, Paintbrush, Globe, Info, MonitorPlay, Sparkles, Trash2, ExternalLink,
+  Palette, Paintbrush, Globe, MonitorPlay, Sparkles, Trash2, ChevronRight,
 } from 'lucide-solid';
 import {
   getAccentColor, setAccentColor, getSkin, setSkin,
@@ -64,27 +64,6 @@ function applySkin(skinId: string) {
   r.style.setProperty('--text', s.text);
 }
 
-/* ═══ Settings Section ═══ */
-function Section(props: { icon: any; title: string; desc?: string; children: any }) {
-  return (
-    <div class="mb-8">
-      <div class="flex items-center gap-3 mb-5">
-        <div class="w-8 h-8 rounded-lg flex items-center justify-center"
-          style={{ background: 'rgba(255,255,255,0.06)' }}>
-          <props.icon size={16} style={{ color: 'var(--accent)' }} />
-        </div>
-        <div>
-          <h2 class="text-base font-bold text-white">{props.title}</h2>
-          <Show when={props.desc}>
-            <p class="text-xs text-white/30 mt-0.5">{props.desc}</p>
-          </Show>
-        </div>
-      </div>
-      {props.children}
-    </div>
-  );
-}
-
 export default function SettingsPage() {
   const [accent, setAccent] = createSignal(getAccentColor());
   const [skin, setSkinState] = createSignal(getSkin());
@@ -92,16 +71,25 @@ export default function SettingsPage() {
   const [autoplay, setAutoplayState] = createSignal(getAutoplayNext());
 
   return (
-    <div class="p-6 md:p-10 pb-24 animate-fade-in max-w-3xl mx-auto">
+    <div class="p-4 md:p-8 pb-24 animate-fade-in max-w-3xl mx-auto">
       {/* Header */}
-      <div class="mb-10">
-        <h1 class="text-2xl md:text-3xl font-black tracking-tight text-white">Settings</h1>
+      <div class="mb-8">
+        <h1 class="text-2xl md:text-3xl font-black tracking-tight" style={{ color: 'var(--text-white)' }}>Settings</h1>
         <p class="text-sm mt-2 text-white/35">Customize your experience</p>
       </div>
 
       {/* Accent Colour */}
-      <Section icon={Palette} title="Accent Colour" desc="Choose a colour that reflects your style">
-        <div class="flex gap-4 flex-wrap">
+      <div class="mb-8">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-9 h-9 rounded-xl flex items-center justify-center glass-card">
+            <Palette size={18} style={{ color: 'var(--accent)' }} />
+          </div>
+          <div>
+            <h2 class="text-sm font-bold" style={{ color: 'var(--text-white)' }}>Accent Colour</h2>
+            <p class="text-xs text-white/30">Choose a colour that reflects your style</p>
+          </div>
+        </div>
+        <div class="flex gap-4 flex-wrap pl-12">
           <For each={ACCENTS}>
             {(a) => (
               <button
@@ -118,11 +106,20 @@ export default function SettingsPage() {
             )}
           </For>
         </div>
-      </Section>
+      </div>
 
       {/* Skin */}
-      <Section icon={Paintbrush} title="Skin" desc="Pick a theme for the interface">
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div class="mb-8">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-9 h-9 rounded-xl flex items-center justify-center glass-card">
+            <Paintbrush size={18} style={{ color: 'var(--accent)' }} />
+          </div>
+          <div>
+            <h2 class="text-sm font-bold" style={{ color: 'var(--text-white)' }}>Skin</h2>
+            <p class="text-xs text-white/30">Pick a theme for the interface</p>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 pl-12">
           <For each={SKINS}>
             {(s) => (
               <button
@@ -137,7 +134,7 @@ export default function SettingsPage() {
                 <div class="flex gap-2 mb-3">
                   <div class="w-5 h-5 rounded-md" style={{ background: s.bg }} />
                   <div class="w-5 h-5 rounded-md" style={{ background: s.surface }} />
-                  <div class="w-4 h-5 rounded-md" style={{ background: skin() === s.id ? 'rgba(255,255,255,0.3)' : 'var(--accent)' }} />
+                  <div class="w-5 h-5 rounded-md" style={{ background: skin() === s.id ? 'rgba(255,255,255,0.3)' : 'var(--accent)' }} />
                 </div>
                 <span class="text-sm font-bold" style={{ color: skin() === s.id ? 'white' : 'var(--text)' }}>
                   {s.name}
@@ -146,20 +143,28 @@ export default function SettingsPage() {
             )}
           </For>
         </div>
-      </Section>
+      </div>
 
       {/* Streaming Source */}
-      <Section icon={Globe} title="Streaming Source" desc="Choose which source to use first">
-        <div class="flex gap-2 flex-wrap">
+      <div class="mb-8">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-9 h-9 rounded-xl flex items-center justify-center glass-card">
+            <Globe size={18} style={{ color: 'var(--accent)' }} />
+          </div>
+          <div>
+            <h2 class="text-sm font-bold" style={{ color: 'var(--text-white)' }}>Streaming Source</h2>
+            <p class="text-xs text-white/30">Choose which source to use first</p>
+          </div>
+        </div>
+        <div class="flex gap-2 flex-wrap pl-12">
           <For each={SOURCES}>
             {(s) => (
               <button
-                class="px-5 py-2 rounded-lg text-sm font-semibold transition-all duration-200"
+                class="px-5 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 glass-card"
                 style={{
-                  background: source() === s.id ? 'var(--accent)' : 'rgba(255,255,255,0.06)',
+                  background: source() === s.id ? 'var(--accent)' : undefined,
                   color: source() === s.id ? 'white' : 'var(--text)',
-                  border: source() === s.id ? 'none' : '1px solid rgba(255,255,255,0.08)',
-                  'box-shadow': source() === s.id ? '0 2px 12px var(--accent-glow)' : 'none',
+                  'box-shadow': source() === s.id ? '0 2px 12px var(--accent-glow)' : undefined,
                 }}
                 onClick={() => { setSourceState(s.id); setActiveSource(s.id); }}
               >
@@ -168,13 +173,22 @@ export default function SettingsPage() {
             )}
           </For>
         </div>
-      </Section>
+      </div>
 
       {/* Player */}
-      <Section icon={MonitorPlay} title="Player">
-        <div class="glass-card p-4 flex items-center justify-between">
+      <div class="mb-8">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-9 h-9 rounded-xl flex items-center justify-center glass-card">
+            <MonitorPlay size={18} style={{ color: 'var(--accent)' }} />
+          </div>
           <div>
-            <p class="text-sm font-semibold text-white">Autoplay next episode</p>
+            <h2 class="text-sm font-bold" style={{ color: 'var(--text-white)' }}>Player</h2>
+            <p class="text-xs text-white/30">Playback preferences</p>
+          </div>
+        </div>
+        <div class="glass-card p-4 flex items-center justify-between ml-12">
+          <div>
+            <p class="text-sm font-semibold" style={{ color: 'var(--text-white)' }}>Autoplay next episode</p>
             <p class="text-xs text-white/35 mt-1">Play the next episode automatically</p>
           </div>
           <button
@@ -191,13 +205,22 @@ export default function SettingsPage() {
             />
           </button>
         </div>
-      </Section>
+      </div>
 
       {/* Data */}
-      <Section icon={Trash2} title="Data">
-        <div class="glass-card p-4 flex items-center justify-between">
+      <div class="mb-8">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-9 h-9 rounded-xl flex items-center justify-center glass-card">
+            <Trash2 size={18} class="text-red-400" />
+          </div>
           <div>
-            <p class="text-sm font-semibold text-white">Clear Continue Watching</p>
+            <h2 class="text-sm font-bold" style={{ color: 'var(--text-white)' }}>Data</h2>
+            <p class="text-xs text-white/30">Manage your local data</p>
+          </div>
+        </div>
+        <div class="glass-card p-4 flex items-center justify-between ml-12">
+          <div>
+            <p class="text-sm font-semibold" style={{ color: 'var(--text-white)' }}>Clear Continue Watching</p>
             <p class="text-xs text-white/35 mt-1">Remove all continue watching entries</p>
           </div>
           <button
@@ -212,13 +235,22 @@ export default function SettingsPage() {
             Clear
           </button>
         </div>
-      </Section>
+      </div>
 
       {/* About */}
-      <Section icon={Sparkles} title="About">
-        <div class="glass-card p-4 flex items-center justify-between">
+      <div class="mb-8">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-9 h-9 rounded-xl flex items-center justify-center glass-card">
+            <Sparkles size={18} style={{ color: 'var(--accent)' }} />
+          </div>
           <div>
-            <p class="text-sm font-bold text-white">Tagflix v2.0</p>
+            <h2 class="text-sm font-bold" style={{ color: 'var(--text-white)' }}>About</h2>
+            <p class="text-xs text-white/30">App information</p>
+          </div>
+        </div>
+        <div class="glass-card p-4 flex items-center justify-between ml-12">
+          <div>
+            <p class="text-sm font-bold" style={{ color: 'var(--text-white)' }}>Tagflix v2.0</p>
             <p class="text-xs text-white/35 mt-1">SolidJS • Built for streaming</p>
           </div>
           <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg glass shrink-0">
@@ -226,7 +258,7 @@ export default function SettingsPage() {
             <span class="text-[11px] font-bold" style={{ color: 'var(--accent)' }}>OPEN SOURCE</span>
           </div>
         </div>
-      </Section>
+      </div>
     </div>
   );
 }
