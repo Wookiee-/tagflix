@@ -18,7 +18,9 @@
     "cap:init": "npx cap init tagflix com.tagflix.app --web-dir dist",
     "cap:add": "npx cap add android",
     "cap:sync": "npx cap sync",
-    "cap:build": "vite build && npx cap sync && npx cap open android"
+    "cap:build": "vite build && npx cap sync && npx cap open android",
+    "android:build": "vite build && npx cap sync && cd android && JAVA_HOME=C:/jdk21/jdk-21.0.7+6 ./gradlew assembleDebug",
+    "android:install": "cd android && JAVA_HOME=C:/jdk21/jdk-21.0.7+6 ./gradlew installDebug"
   },
   "pkg": {
     "targets": [
