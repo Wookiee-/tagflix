@@ -121,7 +121,7 @@ export default function App(props: { children?: JSX.Element }) {
       {/* ═══ Desktop Sidebar ═══ */}
       <Show when={!isPlayer() && !isMobile()}>
         <aside
-          class="w-[72px] shrink-0 flex flex-col items-center py-5 gap-2 overflow-x-hidden overflow-y-auto glass-strong"
+          class="w-[72px] shrink-0 flex flex-col items-center py-5 gap-2 overflow-y-auto glass-strong"
           style={{ 'border-right': '1px solid rgba(255,255,255,0.06)' }}
         >
           {/* Logo */}
