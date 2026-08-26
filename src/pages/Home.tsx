@@ -320,8 +320,7 @@ function MediaRow(props: { title: string; icon?: string; items: TMDBMedia[]; loa
             )}
           </For>
         </div>
-      }>
-        <div class="flex gap-4 px-6 md:px-12 overflow-x-auto pb-3 scroll-smooth">
+      }>          <div class="flex gap-4 px-6 md:px-12 overflow-x-auto pb-3 scroll-smooth" style={{ 'touch-action': 'pan-x' }}>
           <For each={props.items}>
             {(item, i) => <PosterCard item={item} delay={i()} />}
           </For>
@@ -378,7 +377,7 @@ export default function HomePage() {
       <Show when={cwItems().length > 0}>
         <div class="mb-10">
           <SectionHeader title="Continue Watching" icon="▶️" onClear={clearAll} />
-          <div class="flex gap-4 px-6 md:px-12 overflow-x-auto pb-3">
+          <div class="flex gap-4 px-6 md:px-12 overflow-x-auto pb-3" style={{ 'touch-action': 'pan-x' }}>
             <For each={cwItems()}>
               {(cw) => <ContinueCard item={cw} onDelete={deleteEntry} />}
             </For>

@@ -309,6 +309,12 @@ button {
   display: none;
 }
 
+/* ═══ Touch: allow horizontal scroll but pass taps through ═══ */
+.overflow-x-auto {
+  touch-action: pan-x;
+  -webkit-overflow-scrolling: touch;
+}
+
 /* ═══ Horizontal scroll row for TV ═══ */
 .tv-scroll-row {
   display: flex;

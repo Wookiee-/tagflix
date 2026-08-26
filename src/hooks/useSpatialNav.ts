@@ -61,8 +61,9 @@ function pickBest(
     const s = score(current, c, dir);
     if (s > 0) {
       const d = dist(current, c);
-      // Prefer closer elements when scores are similar
-      if (s > bestScore || (s === bestScore && d < bestDist)) {
+      // Always prefer the CLOSEST element in the direction
+      // Lower distance wins, regardless of score magnitude
+      if (d < bestDist || (d === bestDist && s > bestScore)) {
         bestScore = s;
         bestDist = d;
         bestIdx = i;

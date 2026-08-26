@@ -66,9 +66,10 @@ export default function IframePlayer(props: Props) {
         src={props.url}
         class="w-full h-full border-0"
         allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+        allowFullscreen
         onLoad={() => setLoaded(true)}
         onError={() => setError(true)}
-        style={{ opacity: loaded() ? 1 : 0 }}
+        style={{ opacity: loaded() ? 1 : 0, background: 'black' }}
       />
 
 
