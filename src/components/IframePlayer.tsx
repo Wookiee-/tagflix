@@ -18,6 +18,7 @@ export default function IframePlayer(props: Props) {
   const [loaded, setLoaded] = createSignal(false);
   const [error, setError] = createSignal(false);
   const [browserOpen, setBrowserOpen] = createSignal(false);
+  let closeHandle: any = null;
 
   onMount(() => {
     if (isNativeAndroid()) {
@@ -40,6 +41,7 @@ export default function IframePlayer(props: Props) {
 
     onCleanup(() => {
       window.open = (window as any).__origOpen || window.open;
+      if (closeHandle) closeHandle.remove();
     });
   });
 
@@ -47,17 +49,23 @@ export default function IframePlayer(props: Props) {
     try {
       setBrowserOpen(true);
 
-      await InAppBrowser.open({
+      const { id } = await InAppBrowser.openWebView({
         url: props.url,
+        // Full screen inside the app
+        toolbar: true,
         toolbarColor: '#0c0b11',
         showTitle: true,
-        urlBarHidingEnabled: true,
+        title: props.title || 'Tagflix Player',
+        // Close button behavior — destroy webview on close
+        closeAction: 'close' as any,
+        // Enable popups (VidCore needs this for fullscreen)
+        handlePopups: true,
       });
 
-      // Listen for when user taps close/done
-      const closeHandle = await InAppBrowser.addListener('closeEvent', () => {
+      // Listen for close event
+      closeHandle = await InAppBrowser.addListener('closeEvent', () => {
         setBrowserOpen(false);
-        closeHandle.remove();
+        if (closeHandle) closeHandle.remove();
         props.onBack?.();
       });
 
@@ -65,6 +73,14 @@ export default function IframePlayer(props: Props) {
       console.error('[IframePlayer] InAppBrowser error:', e);
       setError(true);
     }
+  }
+
+  async function closeBrowser() {
+    try {
+      await InAppBrowser.close();
+    } catch (e) {}
+    setBrowserOpen(false);
+    props.onBack?.();
   }
 
   // Android: show status while browser is open
@@ -90,30 +106,26 @@ export default function IframePlayer(props: Props) {
             <p class="text-xs mb-6" style={{ color: 'var(--text)', opacity: 0.5 }}>
               Tap X to return to Tagflix
             </p>
-            <Show when={props.onBack}>
-              <button
-                class="px-6 py-2.5 rounded-lg font-semibold text-sm text-white"
-                style={{ background: 'var(--accent)' }}
-                onClick={props.onBack}
-              >
-                ← Back to Tagflix
-              </button>
-            </Show>
+            <button
+              class="px-6 py-2.5 rounded-lg font-semibold text-sm text-white"
+              style={{ background: 'var(--accent)' }}
+              onClick={closeBrowser}
+            >
+              ← Back to Tagflix
+            </button>
           </div>
         </Show>
         <Show when={error()}>
           <div class="flex flex-col items-center">
             <p class="text-lg font-bold text-white mb-2">Failed to open stream</p>
             <p class="text-sm text-gray-400 mb-6">Could not open browser for playback.</p>
-            <Show when={props.onBack}>
-              <button
-                class="px-6 py-2.5 rounded-lg font-semibold text-sm text-white"
-                style={{ background: 'var(--accent)' }}
-                onClick={props.onBack}
-              >
-                Go Back
-              </button>
-            </Show>
+            <button
+              class="px-6 py-2.5 rounded-lg font-semibold text-sm text-white"
+              style={{ background: 'var(--accent)' }}
+              onClick={closeBrowser}
+            >
+              Go Back
+            </button>
           </div>
         </Show>
       </div>
