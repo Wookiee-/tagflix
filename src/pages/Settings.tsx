@@ -90,16 +90,16 @@ export default function SettingsPage() {
   const [autoplay, setAutoplayState] = createSignal(getAutoplayNext());
 
   return (
-    <div class="p-6 md:p-10 pb-24 animate-fade-in max-w-3xl mx-auto">
+    <div class="p-6 md:p-10 pb-24 animate-fade-in max-w-4xl">
       {/* Header */}
-      <div class="mb-16">
+      <div class="mb-10">
         <h1 class="text-3xl md:text-4xl font-black tracking-tight" style={{ color: 'var(--text-white)' }}>Settings</h1>
         <p class="text-sm mt-2 text-white/35">Customize your experience</p>
       </div>
 
       {/* ═══ Theme Skin ═══ */}
-      <div class="mb-16">
-        <h3 class="text-xs font-bold uppercase tracking-widest mb-6" style={{ color: 'var(--accent)' }}>Theme Skin</h3>
+      <div class="mb-10">
+        <h3 class="text-xs font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--accent)' }}>Theme Skin</h3>
         <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
           <For each={SKINS}>
             {(s) => {
@@ -136,8 +136,8 @@ export default function SettingsPage() {
       </div>
 
       {/* ═══ Accent Color ═══ */}
-      <div class="mb-16">
-        <h3 class="text-xs font-bold uppercase tracking-widest mb-6" style={{ color: 'var(--accent)' }}>Accent Color</h3>
+      <div class="mb-10">
+        <h3 class="text-xs font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--accent)' }}>Accent Color</h3>
         <div class="flex gap-3 flex-wrap">
           <For each={ACCENTS}>
             {(a) => (
@@ -158,8 +158,8 @@ export default function SettingsPage() {
       </div>
 
       {/* ═══ Streaming Source ═══ */}
-      <div class="mb-16">
-        <h3 class="text-xs font-bold uppercase tracking-widest mb-6" style={{ color: 'var(--accent)' }}>Streaming Source</h3>
+      <div class="mb-10">
+        <h3 class="text-xs font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--accent)' }}>Streaming Source</h3>
         <div class="flex flex-col gap-2">
           <For each={SOURCES}>
             {(s) => {
@@ -197,8 +197,8 @@ export default function SettingsPage() {
       </div>
 
       {/* ═══ Player ═══ */}
-      <div class="mb-16">
-        <h3 class="text-xs font-bold uppercase tracking-widest mb-6" style={{ color: 'var(--accent)' }}>Player</h3>
+      <div class="mb-10">
+        <h3 class="text-xs font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--accent)' }}>Player</h3>
         <div class="flex items-center justify-between p-4 rounded-xl" style={{ background: 'rgba(255,255,255,0.02)', border: '2px solid rgba(255,255,255,0.06)' }}>
           <div>
             <p class="text-sm font-bold" style={{ color: 'var(--text-white)' }}>Autoplay next episode</p>
@@ -209,8 +209,8 @@ export default function SettingsPage() {
       </div>
 
       {/* ═══ Data ═══ */}
-      <div class="mb-16">
-        <h3 class="text-xs font-bold uppercase tracking-widest mb-6 text-red-400">Data</h3>
+      <div class="mb-10">
+        <h3 class="text-xs font-bold uppercase tracking-widest mb-4 text-red-400">Data</h3>
         <div class="flex items-center justify-between p-4 rounded-xl" style={{ background: 'rgba(255,255,255,0.02)', border: '2px solid rgba(255,255,255,0.06)' }}>
           <div>
             <p class="text-sm font-bold" style={{ color: 'var(--text-white)' }}>Clear Continue Watching</p>
@@ -231,7 +231,7 @@ export default function SettingsPage() {
       </div>
 
       {/* ═══ About ═══ */}
-      <div class="mb-16">
+      <div class="mb-10">
         <div class="flex items-center justify-between p-4 rounded-xl" style={{ background: 'rgba(255,255,255,0.02)', border: '2px solid rgba(255,255,255,0.06)' }}>
           <div>
             <p class="text-sm font-bold" style={{ color: 'var(--text-white)' }}>Tagflix v2.0</p>
