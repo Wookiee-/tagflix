@@ -26,11 +26,11 @@ public class MainActivity extends BridgeActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        // Force landscape only on TV devices
+        // TV/Firestick: force landscape. Phone: allow free rotation (portrait + landscape)
         if (isTvDevice()) {
             setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
         } else {
-            setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+            setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR);
         }
 
         // Full-screen immersive mode
