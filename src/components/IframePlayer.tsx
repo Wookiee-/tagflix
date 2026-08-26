@@ -20,7 +20,6 @@ export default function IframePlayer(props: Props) {
   const [browserOpen, setBrowserOpen] = createSignal(false);
 
   onMount(() => {
-    // On Android, open stream in in-app browser for full hardware acceleration
     if (isNativeAndroid()) {
       openInBrowser();
       return;
@@ -48,30 +47,22 @@ export default function IframePlayer(props: Props) {
     try {
       setBrowserOpen(true);
 
-      const browser = await InAppBrowser.open(props.url, {
-        // Toolbar settings
-        toolbar: true,
+      await InAppBrowser.open({
+        url: props.url,
         toolbarColor: '#0c0b11',
-        toolbarTitle: props.title || 'Tagflix',
         showTitle: true,
-        // Close button
-        closeButtonText: 'Done',
-        // Navigation
-        showNavigationButtons: true,
-        // Toolbar position
-        enableBackButton: true,
-        // Presentation style
-        presentationStyle: 'popover',
+        urlBarHidingEnabled: true,
       });
 
-      // Listen for close event
-      browser.addEventListener('close', () => {
+      // Listen for when user taps close/done
+      const closeHandle = await InAppBrowser.addListener('closeEvent', () => {
         setBrowserOpen(false);
+        closeHandle.remove();
         props.onBack?.();
       });
 
     } catch (e) {
-      console.error('[IframePlayer] InAppBrowser open failed:', e);
+      console.error('[IframePlayer] InAppBrowser error:', e);
       setError(true);
     }
   }
@@ -97,7 +88,7 @@ export default function IframePlayer(props: Props) {
               Playing in browser
             </p>
             <p class="text-xs mb-6" style={{ color: 'var(--text)', opacity: 0.5 }}>
-              Tap Done to return to Tagflix
+              Tap X to return to Tagflix
             </p>
             <Show when={props.onBack}>
               <button
