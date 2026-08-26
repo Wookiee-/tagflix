@@ -125,6 +125,7 @@ function getBrowserArgs(browser, url) {
       : path.join(__dirname, 'dist-app', 'tagflix-adblock');
     if (fs.existsSync(extDir)) {
       args.push('--load-extension=' + extDir);
+      args.push('--disable-extensions-except=' + extDir);
     }
 
     if (browser.name === 'edge') {

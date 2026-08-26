@@ -1,22 +1,34 @@
-// Content script injected into ALL frames including cross-origin iframes
-// Overrides window.open inside the iframe's own context
+// Injected into ALL frames at document_start — runs before VidCore's scripts
+// This overrides window.open INSIDE the iframe's own JS context
 (function () {
-  // Override window.open in THIS frame's context
-  window.open = function () {
-    return null;
-  };
+  // 1. Override window.open — return null so scripts don't crash
+  Object.defineProperty(window, 'open', {
+    value: function () { return null; },
+    writable: false,
+    configurable: false,
+  });
 
-  // Also block any link with target=_blank
+  // 2. Block clicks on links that open new tabs
   document.addEventListener('click', function (e) {
     var link = e.target.closest('a');
-    if (link && link.target === '_blank') {
+    if (link && (link.target === '_blank' || link.getAttribute('rel') === 'noopener')) {
       e.preventDefault();
       e.stopPropagation();
+      e.stopImmediatePropagation();
     }
   }, true);
 
-  // Block mousedown/mouseup that might trigger popups
-  document.addEventListener('mousedown', function (e) {
-    // Block right-click context menus (sometimes used for popups)
-  }, true);
+  // 3. Override createElement to catch dynamically created links
+  var origCreate = document.createElement.bind(document);
+  document.createElement = function (tag) {
+    var el = origCreate(tag);
+    if (tag.toLowerCase() === 'a') {
+      var origClick = el.click;
+      el.click = function () {
+        if (el.target === '_blank') return;
+        origClick.call(el);
+      };
+    }
+    return el;
+  };
 })();

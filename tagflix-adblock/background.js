@@ -1,28 +1,15 @@
-const AD_DOMAINS = [
-  'airlessbacach',
-  'propellerads',
-  'exoclick',
-  'popcash',
-  'popads',
-  'clickadu',
-  'hilltopads',
-  'adskeeper',
-  'monu.delivery',
-  'ad-maven',
-  'pico.cedra',
-  'adf.ly',
-  'shorte.st',
-  'juicyads',
-  'trafficjunky',
-  'onclickmax',
-];
-
-// Block network requests to ad domains
+// Block ad domain requests
 chrome.webRequest.onBeforeRequest.addListener(
   function (details) {
     var url = details.url.toLowerCase();
-    for (var i = 0; i < AD_DOMAINS.length; i++) {
-      if (url.indexOf(AD_DOMAINS[i]) !== -1) {
+    var adPatterns = [
+      'airlessbacach', 'propellerads', 'exoclick', 'popcash', 'popads',
+      'clickadu', 'hilltopads', 'adskeeper', 'monu.delivery', 'ad-maven',
+      'pico.cedra', 'adf.ly', 'shorte.st', 'juicyads', 'trafficjunky',
+      'onclickmax', 'onclickads', 'bidvertiser', 'adsterra', 'mgid',
+    ];
+    for (var i = 0; i < adPatterns.length; i++) {
+      if (url.indexOf(adPatterns[i]) !== -1) {
         return { cancel: true };
       }
     }
@@ -32,21 +19,33 @@ chrome.webRequest.onBeforeRequest.addListener(
   ['blocking']
 );
 
-// Close any new popup tabs/windows immediately
+// Close any new tab that's NOT our main Tagflix tab
 chrome.tabs.onCreated.addListener(function (tab) {
-  // Check if the tab URL is an ad domain
-  if (tab.url) {
-    var url = tab.url.toLowerCase();
-    for (var i = 0; i < AD_DOMAINS.length; i++) {
-      if (url.indexOf(AD_DOMAINS[i]) !== -1) {
-        chrome.tabs.remove(tab.id);
-        return;
+  // Wait a tiny bit for the tab to get a URL
+  setTimeout(function () {
+    chrome.tabs.get(tab.id, function (updatedTab) {
+      if (chrome.runtime.lastError) return;
+      // Close blank tabs or tabs with ad URLs
+      var url = (updatedTab.url || '').toLowerCase();
+      if (!url || url === 'about:blank' || url.startsWith('chrome://')) return;
+      
+      var adPatterns = [
+        'airlessbacach', 'propellerads', 'exoclick', 'popcash', 'popads',
+        'clickadu', 'hilltopads', 'adskeeper', 'monu.delivery', 'ad-maven',
+        'pico.cedra', 'adf.ly', 'shorte.st', 'juicyads', 'trafficjunky',
+        'onclickmax', 'onclickads', 'bidvertiser', 'adsterra', 'mgid',
+      ];
+      for (var i = 0; i < adPatterns.length; i++) {
+        if (url.indexOf(adPatterns[i]) !== -1) {
+          chrome.tabs.remove(updatedTab.id);
+          return;
+        }
       }
-    }
-  }
-  // Also close blank/new tabs that opened from an embed (openerTabId set = popup)
-  if (tab.openerTabId) {
-    // This tab was opened by another tab (popup) — close it
-    chrome.tabs.remove(tab.id);
-  }
+      
+      // If this tab has an opener (was opened by another tab) and isn't localhost, close it
+      if (updatedTab.openerTabId && url.indexOf('localhost') === -1 && url.indexOf('127.0.0.1') === -1) {
+        chrome.tabs.remove(updatedTab.id);
+      }
+    });
+  }, 100);
 });
