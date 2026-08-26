@@ -97,13 +97,15 @@ function HeroCarousel(props: { items: TMDBMedia[] }) {
 
               <div class="flex items-center gap-3">
                 <button
-                  class="btn-primary btn-sm"
+                  class="btn-primary btn-sm tv-focusable"
+                  tabIndex="0"
                   onClick={() => navigate(`/${type(item)}/${item.id}`)}
                 >
                   <Play size={16} fill="white" /> Watch Now
                 </button>
                 <button
-                  class="btn-secondary btn-sm"
+                  class="btn-secondary btn-sm tv-focusable"
+                  tabIndex="0"
                   onClick={() => navigate(`/${type(item)}/${item.id}`)}
                 >
                   <Info size={16} /> More Info
@@ -116,13 +118,15 @@ function HeroCarousel(props: { items: TMDBMedia[] }) {
 
       {/* Navigation arrows */}
       <button
-        class="absolute left-4 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full flex items-center justify-center bg-black/40 backdrop-blur-md text-white/80 hover:text-white hover:bg-black/60 transition-all border border-white/10"
+        class="absolute left-4 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full flex items-center justify-center bg-black/40 backdrop-blur-md text-white/80 hover:text-white hover:bg-black/60 transition-all border border-white/10 tv-focusable"
+        tabIndex="0"
         onClick={() => go(-1)}
       >
         <ChevronLeft size={24} />
       </button>
       <button
-        class="absolute right-4 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full flex items-center justify-center bg-black/40 backdrop-blur-md text-white/80 hover:text-white hover:bg-black/60 transition-all border border-white/10"
+        class="absolute right-4 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full flex items-center justify-center bg-black/40 backdrop-blur-md text-white/80 hover:text-white hover:bg-black/60 transition-all border border-white/10 tv-focusable"
+        tabIndex="0"
         onClick={() => go(1)}
       >
         <ChevronRight size={24} />
@@ -181,7 +185,8 @@ function PosterCard(props: { item: TMDBMedia; delay?: number }) {
 
   return (
     <button
-      class="shrink-0 w-[140px] md:w-[185px] group cursor-pointer animate-fade-in"
+      class="shrink-0 w-[140px] md:w-[185px] group cursor-pointer animate-fade-in tv-focusable"
+      tabIndex="0"
       style={{ 'animation-delay': `${(props.delay || 0) * 60}ms` }}
       onClick={() => navigate(`/${type()}/${props.item.id}`)}
     >
@@ -246,7 +251,8 @@ function ContinueCard(props: {
       </button>
 
       <button
-        class="w-full cursor-pointer"
+        class="w-full cursor-pointer tv-focusable"
+        tabIndex="0"
         onClick={() => navigate(`/${props.item.mediaType}/${props.item.tmdbId}`)}
       >
         <div class="relative w-full aspect-[2/3] rounded-xl overflow-hidden mb-2.5 transition-all duration-300 group-hover:ring-2 group-hover:ring-white/30 group-hover:shadow-2xl"

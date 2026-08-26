@@ -3,6 +3,7 @@ import { useLocation, A } from '@solidjs/router';
 import {
   Home, Compass, Search, Film, Tv, Bookmark, Settings,
 } from 'lucide-solid';
+import { useSpatialNav } from './hooks/useSpatialNav';
 
 const NAV_ITEMS = [
   { name: 'Home', icon: Home, path: '/' },
@@ -39,20 +40,57 @@ const ACCENTS: Record<string, { a: string; h: string }> = {
   '#06b6d4': { a: '#06b6d4', h: '#0891b2' },
 };
 
+/** Detect TV / Firestick / Android TV via user-agent */
+function detectTv(): boolean {
+  try {
+    const ua = navigator.userAgent.toLowerCase();
+    return (
+      ua.includes('aft') ||            // Amazon Fire TV
+      ua.includes('smart-tv') ||
+      ua.includes('googletv') ||
+      ua.includes('androidtv') ||
+      ua.includes('roku') ||
+      ua.includes('viera') ||
+      ua.includes('netcast') ||        // LG
+      ua.includes('tizen') ||          // Samsung
+      ua.includes('webos') ||          // LG webOS
+      ua.includes('mibox') ||          // Xiaomi Mi Box
+      ua.includes('chromecast')
+    );
+  } catch {
+    return false;
+  }
+}
+
 export default function App(props: { children?: JSX.Element }) {
   const location = useLocation();
   const [isMobile, setIsMobile] = createSignal(window.innerWidth < 768);
+  const [isTv, setIsTv] = createSignal(false);
 
   const isPlayer = () => location.pathname === '/player';
 
+  // Enable spatial navigation for TV/Firestick
+  useSpatialNav();
+
   onMount(() => {
+    const tv = detectTv();
+    setIsTv(tv);
+
     const detect = () => {
       const root = document.documentElement;
       root.classList.remove('tv-mode', 'mobile-mode', 'desktop-mode');
-      const coarse = window.matchMedia('(pointer: coarse)').matches;
+
       const small = window.innerWidth < 768;
-      root.classList.add(coarse ? (small ? 'mobile-mode' : 'tv-mode') : 'desktop-mode');
       setIsMobile(small);
+
+      if (tv || small === false && window.innerWidth < 1024) {
+        // Touch device but not phone = tablet or TV
+        root.classList.add('tv-mode');
+      } else if (small) {
+        root.classList.add('mobile-mode');
+      } else {
+        root.classList.add('desktop-mode');
+      }
     };
     detect();
     window.addEventListener('resize', detect);
@@ -88,8 +126,9 @@ export default function App(props: { children?: JSX.Element }) {
         >
           {/* Logo */}
           <div
-            class="w-11 h-11 rounded-xl flex items-center justify-center mb-5 font-black text-base text-white"
+            class="w-11 h-11 rounded-xl flex items-center justify-center mb-5 font-black text-base text-white tv-focusable"
             style={{ background: 'var(--accent)', 'box-shadow': '0 4px 16px var(--accent-glow)' }}
+            tabindex="0"
           >
             T
           </div>
@@ -99,7 +138,7 @@ export default function App(props: { children?: JSX.Element }) {
             return (
               <A
                 href={item.path}
-                class="w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-200 relative group hover:scale-105"
+                class="w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-200 relative group hover:scale-105 tv-focusable"
                 classList={{ 'text-white': isActive(item.path) }}
                 style={{
                   background: isActive(item.path) ? 'var(--accent)' : 'transparent',
@@ -107,6 +146,7 @@ export default function App(props: { children?: JSX.Element }) {
                   'box-shadow': isActive(item.path) ? '0 4px 16px var(--accent-glow)' : 'none',
                 }}
                 title={item.name}
+                tabindex="0"
               >
                 <Icon size={22} />
                 <span class="absolute left-14 px-3 py-1.5 rounded-lg text-sm font-semibold text-white whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 glass-strong">
@@ -120,13 +160,14 @@ export default function App(props: { children?: JSX.Element }) {
 
           <A
             href="/settings"
-            class="w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-200"
+            class="w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-200 tv-focusable"
             style={{
               color: isActive('/settings') ? 'var(--accent)' : 'var(--text)',
               background: isActive('/settings') ? 'var(--accent)' : 'transparent',
               'box-shadow': isActive('/settings') ? '0 4px 16px var(--accent-glow)' : 'none',
             }}
             title="Settings"
+            tabindex="0"
           >
             <Settings size={22} />
           </A>
@@ -152,8 +193,9 @@ export default function App(props: { children?: JSX.Element }) {
             return (
               <A
                 href={item.path}
-                class="flex flex-col items-center gap-1 py-2 px-3"
+                class="flex flex-col items-center gap-1 py-2 px-3 tv-focusable"
                 style={{ color: isActive(item.path) ? 'var(--accent)' : 'var(--text)' }}
+                tabindex="0"
               >
                 <Icon size={22} />
                 <span class="text-[11px] font-semibold">{item.name}</span>
@@ -161,6 +203,13 @@ export default function App(props: { children?: JSX.Element }) {
             );
           })}
         </nav>
+      </Show>
+
+      {/* ═══ TV / Firestick D-Pad Overlay Hint ═══ */}
+      <Show when={isTv()}>
+        <div class="fixed bottom-4 right-4 z-50 px-3 py-1.5 rounded-lg glass-strong text-[10px] text-white/40 font-medium pointer-events-none animate-fade-in">
+          📺 Use D-Pad to navigate • OK to select
+        </div>
       </Show>
     </div>
   );
