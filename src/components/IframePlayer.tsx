@@ -61,12 +61,13 @@ export default function IframePlayer(props: Props) {
         </div>
       </Show>
 
-      {/* Iframe — no sandbox, popups blocked by extension content script + window.open override */}
+      {/* Iframe — no sandbox, popups blocked by window.open override */}
       <iframe
         src={props.url}
         class="w-full h-full border-0"
         allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
         allowFullscreen
+        loading="eager"
         onLoad={() => setLoaded(true)}
         onError={() => setError(true)}
         style={{ opacity: loaded() ? 1 : 0, background: 'black' }}

@@ -76,8 +76,15 @@ public class MainActivity extends BridgeActivity {
             settings.setCacheMode(WebSettings.LOAD_DEFAULT);
             settings.setBlockNetworkImage(false);
 
+            // Streaming performance
+            settings.setAllowFileAccessFromFileURLs(true);
+            settings.setAllowUniversalAccessFromFileURLs(true);
+
             // Hardware acceleration for video
             webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+
+            // Preload iframe content for faster startup
+            webView.setInitialScale(100);
 
             // DO NOT set custom WebChromeClient or WebViewClient here
             // Capacitor sets its own — overwriting them breaks the JS bridge
