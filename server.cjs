@@ -131,17 +131,40 @@ function openBrowser(url) {
 
   if (browser.engine === 'gecko') {
     var profilesDir = path.join(os.homedir(), '.tagflix', 'firefox-profiles');
+    var tagflixProfile = path.join(profilesDir, 'tagflix');
     try {
       if (!fs.existsSync(profilesDir)) fs.mkdirSync(profilesDir, { recursive: true });
       var profilesIni = path.join(os.homedir(), '.tagflix', 'firefox-profiles.ini');
       if (!fs.existsSync(profilesIni)) {
         fs.writeFileSync(profilesIni, '[General]\nStartWithLastProfile=0\n\n[Profile0]\nName=Tagflix\nIsRelative=1\nPath=tagflix\n');
-        var tagflixProfile = path.join(profilesDir, 'tagflix');
-        if (!fs.existsSync(tagflixProfile)) fs.mkdirSync(tagflixProfile, { recursive: true });
       }
-      args.push('-Profile');
-      args.push(path.join(profilesDir, 'tagflix'));
+      if (!fs.existsSync(tagflixProfile)) fs.mkdirSync(tagflixProfile, { recursive: true });
+
+      // Inject autoconfig to block popups in Firefox
+      var autoconfDir = path.join(tagflixProfile, 'defaults', 'pref');
+      if (!fs.existsSync(autoconfDir)) fs.mkdirSync(autoconfDir, { recursive: true });
+      fs.writeFileSync(path.join(autoconfDir, 'autoconfig.js'),
+        'pref("general.config.filename", "tagflix-block.js");\n' +
+        'pref("general.config.obscure_value", 0);\n' +
+        'pref("general.config.sandbox_enabled", false);\n'
+      );
+      // The actual blocking script
+      fs.writeFileSync(path.join(tagflixProfile, 'tagflix-block.js'),
+        '// Tagflix popup blocker\n' +
+        'try {\n' +
+        '  var _origOpen = window.open;\n' +
+        '  window.open = function() { return null; };\n' +
+        '} catch(e) {}\n' +
+        '// Also block via Firefox prefs\n' +
+        'try {\n' +
+        '  lockPref("dom.popup_allowed_events", "");\n' +
+        '  lockPref("dom.disable_open_during_load", true);\n' +
+        '  lockPref("privacy.trackingprotection.enabled", true);\n' +
+        '} catch(e) {}\n'
+      );
     } catch (e) {}
+    args.push('-Profile');
+    args.push(tagflixProfile);
   }
 
   var proc = spawn(browser.path, args, {
