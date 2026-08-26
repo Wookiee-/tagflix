@@ -1,6 +1,7 @@
 import { createSignal, Show, onMount, onCleanup } from 'solid-js';
 import { Capacitor } from '@capacitor/core';
-import { InAppBrowser } from '@capgo/capacitor-inappbrowser';
+import { Browser } from '@capacitor/browser';
+import { App } from '@capacitor/app';
 
 interface Props {
   url: string;
@@ -18,7 +19,7 @@ export default function IframePlayer(props: Props) {
   const [loaded, setLoaded] = createSignal(false);
   const [error, setError] = createSignal(false);
   const [browserOpen, setBrowserOpen] = createSignal(false);
-  let closeHandle: any = null;
+  let appStateHandle: any = null;
 
   onMount(() => {
     if (isNativeAndroid()) {
@@ -41,7 +42,7 @@ export default function IframePlayer(props: Props) {
 
     onCleanup(() => {
       window.open = (window as any).__origOpen || window.open;
-      if (closeHandle) closeHandle.remove();
+      if (appStateHandle) appStateHandle.remove();
     });
   });
 
@@ -49,35 +50,31 @@ export default function IframePlayer(props: Props) {
     try {
       setBrowserOpen(true);
 
-      // Use open() — Chrome Custom Tab handles fullscreen properly
-      await InAppBrowser.open({
-        url: props.url,
-        toolbarColor: '#0c0b11',
-        showTitle: true,
-        // Back arrow instead of X — feels more natural
-        showArrow: true,
-        // Auto-hide URL bar on scroll
-        urlBarHidingEnabled: true,
-        // Don't open deep links
-        preventDeeplink: true,
+      // Listen for app coming back to foreground (user pressed Back)
+      appStateHandle = await App.addListener('appStateChange', (state) => {
+        if (state.isActive) {
+          setBrowserOpen(false);
+          if (appStateHandle) appStateHandle.remove();
+          props.onBack?.();
+        }
       });
 
-      // Listen for when user taps back/close
-      closeHandle = await InAppBrowser.addListener('closeEvent', () => {
-        setBrowserOpen(false);
-        if (closeHandle) closeHandle.remove();
-        props.onBack?.();
+      // Open in system browser — fullscreen works, Back button closes it
+      await Browser.open({
+        url: props.url,
+        presentationStyle: 'popover',
+        toolbarColor: '#0c0b11',
       });
 
     } catch (e) {
-      console.error('[IframePlayer] InAppBrowser error:', e);
+      console.error('[IframePlayer] Browser open failed:', e);
       setError(true);
     }
   }
 
   async function closeBrowser() {
     try {
-      await InAppBrowser.close();
+      await Browser.close();
     } catch (e) {}
     setBrowserOpen(false);
     props.onBack?.();
@@ -104,7 +101,7 @@ export default function IframePlayer(props: Props) {
               Playing in browser
             </p>
             <p class="text-xs mb-6" style={{ color: 'var(--text)', opacity: 0.5 }}>
-              Tap ← to return to Tagflix
+              Press Back to return to Tagflix
             </p>
             <button
               class="px-6 py-2.5 rounded-lg font-semibold text-sm text-white"
