@@ -159,7 +159,7 @@ export default function App(props: { children?: JSX.Element }) {
             href="/settings"
             class="w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-200 hover:scale-105 tv-focusable"
             style={{
-              color: isActive('/settings') ? 'var(--accent)' : 'var(--text)',
+              color: isActive('/settings') ? 'white' : 'var(--text)',
               background: isActive('/settings') ? 'var(--accent)' : 'transparent',
               'box-shadow': isActive('/settings') ? '0 4px 16px var(--accent-glow)' : 'none',
             }}
