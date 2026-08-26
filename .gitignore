@@ -12,3 +12,6 @@ thumbs.db
 
 
 VidCore*
+*.keystore
+tagflix-release.apk
+tagflix-debug.apk
