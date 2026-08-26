@@ -1,18 +1,15 @@
 package com.tagflix.app;
 
 import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
+import android.view.WindowInsets;
+import android.view.WindowInsetsController;
 import android.view.WindowManager;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
-import android.webkit.PermissionRequest;
-import android.webkit.WebChromeClient;
-import android.webkit.WebViewClient;
-import android.webkit.SslErrorHandler;
-import android.net.http.SslError;
 import android.content.res.Configuration;
-import android.util.DisplayMetrics;
 import com.getcapacitor.BridgeActivity;
 
 public class MainActivity extends BridgeActivity {
@@ -26,27 +23,42 @@ public class MainActivity extends BridgeActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        // TV/Firestick: force landscape. Phone: allow free rotation (portrait + landscape)
+        // TV/Firestick: force landscape. Phone: allow free rotation
         if (isTvDevice()) {
             setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
         } else {
             setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR);
         }
 
-        // Full-screen immersive mode
+        // Keep screen on
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-        getWindow().getDecorView().setSystemUiVisibility(
-            View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-            | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-            | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-            | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-            | View.SYSTEM_UI_FLAG_FULLSCREEN
-            | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-        );
 
         super.onCreate(savedInstanceState);
 
-        // Configure the WebView after Capacitor creates it
+        // Full-screen immersive — modern API (Android 30+)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            getWindow().setDecorFitsSystemWindows(false);
+            WindowInsetsController controller = getWindow().getInsetsController();
+            if (controller != null) {
+                controller.hide(WindowInsets.Type.systemBars());
+                controller.setSystemBarsBehavior(
+                    WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                );
+            }
+        } else {
+            // Legacy immersive mode for older devices
+            getWindow().getDecorView().setSystemUiVisibility(
+                View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                | View.SYSTEM_UI_FLAG_FULLSCREEN
+                | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+            );
+        }
+
+        // Configure WebView AFTER Capacitor creates it — DO NOT overwrite
+        // Capacitor's WebChromeClient/WebViewClient or the bridge breaks
         WebView webView = getBridge().getWebView();
         if (webView != null) {
             WebSettings settings = webView.getSettings();
@@ -67,26 +79,8 @@ public class MainActivity extends BridgeActivity {
             // Hardware acceleration for video
             webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
 
-            // Allow fullscreen
-            webView.setWebChromeClient(new WebChromeClient() {
-                @Override
-                public void onPermissionRequest(final PermissionRequest request) {
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            request.grant(request.getResources());
-                        }
-                    });
-                }
-            });
-
-            // SSL handling for mixed content
-            webView.setWebViewClient(new WebViewClient() {
-                @Override
-                public void onReceivedSslError(WebView view, SslErrorHandler handler, SslError error) {
-                    handler.proceed();
-                }
-            });
+            // DO NOT set custom WebChromeClient or WebViewClient here
+            // Capacitor sets its own — overwriting them breaks the JS bridge
         }
     }
 

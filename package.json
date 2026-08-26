@@ -19,8 +19,9 @@
     "cap:add": "npx cap add android",
     "cap:sync": "npx cap sync",
     "cap:build": "vite build && npx cap sync && npx cap open android",
-    "android:build": "vite build && npx cap sync && cd android && JAVA_HOME=C:/jdk21/jdk-21.0.7+6 ./gradlew assembleDebug",
-    "android:install": "cd android && JAVA_HOME=C:/jdk21/jdk-21.0.7+6 ./gradlew installDebug"
+    "android:build": "vite build && node -e \"const f=require('fs'),p='dist/index.html';f.writeFileSync(p,f.readFileSync(p,'utf8').replace(/ crossorigin/g,''))\" && npx cap sync && cd android && gradlew.bat assembleDebug",
+    "android:release": "vite build && node -e \"const f=require('fs'),p='dist/index.html';f.writeFileSync(p,f.readFileSync(p,'utf8').replace(/ crossorigin/g,''))\" && npx cap sync && cd android && gradlew.bat assembleRelease",
+    "android:install": "cd android && gradlew.bat installDebug"
   },
   "pkg": {
     "targets": [
@@ -42,6 +43,7 @@
   },
   "devDependencies": {
     "@types/node": "^24.13.3",
+    "cross-env": "^10.1.0",
     "pkg": "^5.8.1",
     "typescript": "~6.0.2",
     "vite": "^8.2.0",

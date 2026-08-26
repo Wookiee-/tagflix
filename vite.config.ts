@@ -13,6 +13,7 @@ export default defineConfig({
   },
   base: './',
   build: {
-    target: 'es2023',
+    target: 'es2020',
+    modulePreload: { polyfill: false },
   },
 })
