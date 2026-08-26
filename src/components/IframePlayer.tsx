@@ -1,7 +1,6 @@
 import { createSignal, Show, onMount, onCleanup } from 'solid-js';
 import { Capacitor } from '@capacitor/core';
-import { Browser } from '@capacitor/browser';
-import { App } from '@capacitor/app';
+import { InAppBrowser } from '@capgo/capacitor-inappbrowser';
 
 interface Props {
   url: string;
@@ -21,7 +20,7 @@ export default function IframePlayer(props: Props) {
   const [browserOpen, setBrowserOpen] = createSignal(false);
 
   onMount(() => {
-    // On Android, open stream in system browser for full hardware acceleration
+    // On Android, open stream in in-app browser for full hardware acceleration
     if (isNativeAndroid()) {
       openInBrowser();
       return;
@@ -49,27 +48,30 @@ export default function IframePlayer(props: Props) {
     try {
       setBrowserOpen(true);
 
-      // Listen for when browser closes — navigate back
-      const listener = await App.addListener('appStateChange', (state) => {
-        if (state.isActive) {
-          // User returned to app from browser
-          setBrowserOpen(false);
-          listener.remove();
-          props.onBack?.();
-        }
-      });
-
-      await Browser.open({
-        url: props.url,
-        presentationStyle: 'popover',
+      const browser = await InAppBrowser.open(props.url, {
+        // Toolbar settings
+        toolbar: true,
         toolbarColor: '#0c0b11',
+        toolbarTitle: props.title || 'Tagflix',
+        showTitle: true,
+        // Close button
+        closeButtonText: 'Done',
+        // Navigation
+        showNavigationButtons: true,
+        // Toolbar position
+        enableBackButton: true,
+        // Presentation style
+        presentationStyle: 'popover',
       });
 
-      // Browser opened — wait for it to close
-      // On Android, pressing Back closes the Custom Chrome Tab
-      // and returns to the app, triggering appStateChange
+      // Listen for close event
+      browser.addEventListener('close', () => {
+        setBrowserOpen(false);
+        props.onBack?.();
+      });
+
     } catch (e) {
-      console.error('[IframePlayer] Browser open failed:', e);
+      console.error('[IframePlayer] InAppBrowser open failed:', e);
       setError(true);
     }
   }
@@ -78,17 +80,14 @@ export default function IframePlayer(props: Props) {
   if (isNativeAndroid()) {
     return (
       <div class="fixed inset-0 z-[50] bg-black flex flex-col items-center justify-center">
-        <Show when={!browserOpen()}>
+        <Show when={!browserOpen() && !error()}>
           <div class="flex flex-col items-center">
             <div
               class="w-10 h-10 rounded-full border-2 animate-spin mb-4"
               style={{ 'border-color': 'var(--border)', 'border-top-color': 'var(--accent)' }}
             />
             <p class="text-sm mb-2" style={{ color: 'var(--text)' }}>
-              Opening in browser...
-            </p>
-            <p class="text-xs" style={{ color: 'var(--text)', opacity: 0.5 }}>
-              Press Back to return to Tagflix
+              Opening player...
             </p>
           </div>
         </Show>
@@ -98,7 +97,7 @@ export default function IframePlayer(props: Props) {
               Playing in browser
             </p>
             <p class="text-xs mb-6" style={{ color: 'var(--text)', opacity: 0.5 }}>
-              Press Back to return to Tagflix
+              Tap Done to return to Tagflix
             </p>
             <Show when={props.onBack}>
               <button
