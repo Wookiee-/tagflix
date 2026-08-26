@@ -151,10 +151,10 @@ export default function SettingsPage() {
       </div>
 
       {/* ═══ Accent Colour ═══ */}
-      <div class="mb-10">
+      <div class="mb-16">
         <div class="flex items-center gap-3 mb-5">
-          <div class="w-10 h-10 rounded-xl flex items-center justify-center glass-card">
-            <Palette size={20} style={{ color: 'var(--accent)' }} />
+          <div class="w-8 h-8 rounded-lg flex items-center justify-center glass-card">
+            <Palette size={16} style={{ color: 'var(--accent)' }} />
           </div>
           <div>
             <h2 class="text-base font-bold" style={{ color: 'var(--text-white)' }}>Accent Colour</h2>
@@ -185,10 +185,10 @@ export default function SettingsPage() {
       </div>
 
       {/* ═══ Skin ═══ */}
-      <div class="mb-10">
+      <div class="mb-16">
         <div class="flex items-center gap-3 mb-5">
-          <div class="w-10 h-10 rounded-xl flex items-center justify-center glass-card">
-            <Paintbrush size={20} style={{ color: 'var(--accent)' }} />
+          <div class="w-8 h-8 rounded-lg flex items-center justify-center glass-card">
+            <Paintbrush size={16} style={{ color: 'var(--accent)' }} />
           </div>
           <div>
             <h2 class="text-base font-bold" style={{ color: 'var(--text-white)' }}>Skin</h2>
@@ -213,10 +213,10 @@ export default function SettingsPage() {
       </div>
 
       {/* ═══ Streaming Source ═══ */}
-      <div class="mb-10">
+      <div class="mb-16">
         <div class="flex items-center gap-3 mb-5">
-          <div class="w-10 h-10 rounded-xl flex items-center justify-center glass-card">
-            <Globe size={20} style={{ color: 'var(--accent)' }} />
+          <div class="w-8 h-8 rounded-lg flex items-center justify-center glass-card">
+            <Globe size={16} style={{ color: 'var(--accent)' }} />
           </div>
           <div>
             <h2 class="text-base font-bold" style={{ color: 'var(--text-white)' }}>Streaming Source</h2>
@@ -235,10 +235,10 @@ export default function SettingsPage() {
       </div>
 
       {/* ═══ Player ═══ */}
-      <div class="mb-10">
+      <div class="mb-16">
         <div class="flex items-center gap-3 mb-5">
-          <div class="w-10 h-10 rounded-xl flex items-center justify-center glass-card">
-            <MonitorPlay size={20} style={{ color: 'var(--accent)' }} />
+          <div class="w-8 h-8 rounded-lg flex items-center justify-center glass-card">
+            <MonitorPlay size={16} style={{ color: 'var(--accent)' }} />
           </div>
           <div>
             <h2 class="text-base font-bold" style={{ color: 'var(--text-white)' }}>Player</h2>
@@ -255,10 +255,10 @@ export default function SettingsPage() {
       </div>
 
       {/* ═══ Data ═══ */}
-      <div class="mb-10">
+      <div class="mb-16">
         <div class="flex items-center gap-3 mb-5">
-          <div class="w-10 h-10 rounded-xl flex items-center justify-center glass-card">
-            <Trash2 size={20} class="text-red-400" />
+          <div class="w-8 h-8 rounded-lg flex items-center justify-center glass-card">
+            <Trash2 size={16} class="text-red-400" />
           </div>
           <div>
             <h2 class="text-base font-bold" style={{ color: 'var(--text-white)' }}>Data</h2>
@@ -285,10 +285,10 @@ export default function SettingsPage() {
       </div>
 
       {/* ═══ About ═══ */}
-      <div class="mb-10">
+      <div class="mb-16">
         <div class="flex items-center gap-3 mb-5">
-          <div class="w-10 h-10 rounded-xl flex items-center justify-center glass-card">
-            <Sparkles size={20} style={{ color: 'var(--accent)' }} />
+          <div class="w-8 h-8 rounded-lg flex items-center justify-center glass-card">
+            <Sparkles size={16} style={{ color: 'var(--accent)' }} />
           </div>
           <div>
             <h2 class="text-base font-bold" style={{ color: 'var(--text-white)' }}>About</h2>
