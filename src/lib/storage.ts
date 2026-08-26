@@ -41,8 +41,11 @@ export function getContinueWatching(): ContinueWatching[] {
 }
 
 export function saveContinueWatching(entry: ContinueWatching): void {
-  const list = getContinueWatching().filter(e => e.key !== entry.key);
-  list.unshift(entry);
+  // For TV shows, use tmdbId:mediaType as key so only one entry per show
+  // For movies, use tmdbId:mediaType as key so only one entry per movie
+  const normalizedKey = `${entry.tmdbId}:${entry.mediaType}`;
+  const list = getContinueWatching().filter(e => e.key !== normalizedKey && !e.key.startsWith(`${entry.tmdbId}:`));
+  list.unshift({ ...entry, key: normalizedKey });
   // Keep last 50
   setItem('continue_watching', list.slice(0, 50));
 }

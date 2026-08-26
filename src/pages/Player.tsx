@@ -1,9 +1,10 @@
-import { createSignal, Show, For } from 'solid-js';
+import { createSignal, createResource, Show, For } from 'solid-js';
 import { useNavigate, useLocation } from '@solidjs/router';
 import { ArrowLeft, MonitorPlay, List, ChevronDown } from 'lucide-solid';
 import IframePlayer from '../components/IframePlayer';
 import { SOURCES, getSource } from '../lib/sources';
 import { saveContinueWatching } from '../lib/storage';
+import { getSeasonEpisodes, type TMDBEpisode, type TMDBSeason } from '../lib/tmdb';
 
 export default function PlayerPage() {
   const navigate = useNavigate();
@@ -14,6 +15,25 @@ export default function PlayerPage() {
   const [title] = createSignal(state()?.title || '');
   const [showSources, setShowSources] = createSignal(false);
   const [showEpisodes, setShowEpisodes] = createSignal(false);
+  const [activeSeason, setActiveSeason] = createSignal(state()?.activeSeason || state()?.season || 1);
+  const [episodes, setEpisodes] = createSignal<TMDBEpisode[]>(state()?.episodes || []);
+  const [seasons] = createSignal<TMDBSeason[]>(state()?.seasons || []);
+
+  // Fetch episodes when season changes
+  const [seasonData] = createResource(
+    () => ({ id: state()?.tmdbId, season: activeSeason(), mediaType: state()?.mediaType }),
+    async ({ id, season, mediaType }) => {
+      if (mediaType !== 'tv' || !id) return;
+      try {
+        const eps = await getSeasonEpisodes(id, season);
+        setEpisodes(eps);
+        return eps;
+      } catch (e) {
+        console.error('[Player] Failed to load episodes:', e);
+        return [];
+      }
+    }
+  );
 
   const handleBack = () => {
     if (state()?.tmdbId) {
@@ -55,6 +75,7 @@ export default function PlayerPage() {
 
     const url = source.tvUrl(s.tmdbId, ep.season_number, ep.episode_number);
     setEmbedUrl(url);
+    setActiveSeason(ep.season_number);
     setShowEpisodes(false);
 
     navigate('/player', {
@@ -63,10 +84,15 @@ export default function PlayerPage() {
         embedUrl: url,
         season: ep.season_number,
         episode: ep.episode_number,
+        activeSeason: ep.season_number,
         title: `${s.title.split(' S')[0]} S${ep.season_number}E${ep.episode_number}`,
       },
       replace: true,
     });
+  };
+
+  const switchSeason = (seasonNum: number) => {
+    setActiveSeason(seasonNum);
   };
 
   return (
@@ -138,14 +164,42 @@ export default function PlayerPage() {
           class="absolute bottom-0 left-0 right-0 z-[60] max-h-[60vh] overflow-y-auto p-4 bg-gradient-to-t from-black/95 via-black/90 to-transparent"
           onClick={(e) => e.stopPropagation()}
         >
+          {/* Season selector */}
+          <Show when={seasons().length > 0}>
+            <div class="flex items-center gap-2 mb-3">
+              <List size={14} style={{ color: 'var(--accent)' }} />
+              <h3 class="text-xs font-bold uppercase tracking-wider text-white/50">Seasons</h3>
+            </div>
+            <div class="flex gap-2 overflow-x-auto pb-3 mb-4">
+              <For each={seasons()}>
+                {(season) => {
+                  const isActive = () => activeSeason() === season.season_number;
+                  return (
+                    <button
+                      class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all shrink-0"
+                      style={{
+                        background: isActive() ? 'var(--accent)' : 'rgba(255,255,255,0.08)',
+                        color: isActive() ? 'white' : 'var(--text)',
+                        'box-shadow': isActive() ? '0 2px 12px var(--accent-glow)' : undefined,
+                      }}
+                      onClick={() => switchSeason(season.season_number)}
+                    >
+                      {season.name || `S${season.season_number}`}
+                    </button>
+                  );
+                }}
+              </For>
+            </div>
+          </Show>
+
+          {/* Episodes for current season */}
           <div class="flex items-center gap-2 mb-3">
-            <List size={14} style={{ color: 'var(--accent)' }} />
             <h3 class="text-xs font-bold uppercase tracking-wider text-white/50">
-              Season {state()?.activeSeason || state()?.season || 1}
+              Season {activeSeason()} — {episodes().length} Episodes
             </h3>
           </div>
           <div class="flex flex-col gap-2">
-            <For each={state()?.episodes || []}>
+            <For each={episodes()}>
               {(ep: any) => {
                 const isCurrent = ep.season_number === state()?.season && ep.episode_number === state()?.episode;
                 return (
