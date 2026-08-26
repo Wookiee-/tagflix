@@ -19,8 +19,6 @@ const MIME = {
   '.ttf': 'font/ttf', '.ico': 'image/x-icon',
 };
 
-
-
 function findBrowser() {
   var platform = process.platform;
 
@@ -87,7 +85,7 @@ function findBrowser() {
   return null;
 }
 
-function getBrowserArgs(browser, url) {
+function getBrowserArgs(browser, url, extDir) {
   var args = [];
 
   if (browser.engine === 'gecko') {
@@ -105,11 +103,9 @@ function getBrowserArgs(browser, url) {
     args.push('--disable-session-crashed-bubble');
     args.push('--no-sandbox');
     args.push('--disable-sync');
-    // Load Tagflix ad-block extension (blocks popups inside cross-origin iframes)
-    var extDir = isPkg
-      ? path.join(path.dirname(process.execPath), 'tagflix-adblock')
-      : path.join(__dirname, 'dist-app', 'tagflix-adblock');
-    if (fs.existsSync(extDir)) {
+
+    // Load ad-block extension — works with --user-data-dir when both flags are set
+    if (extDir && fs.existsSync(extDir)) {
       args.push('--load-extension=' + extDir);
       args.push('--disable-extensions-except=' + extDir);
     }
@@ -130,7 +126,13 @@ function openBrowser(url) {
   var browser = findBrowser();
   if (!browser) return;
 
-  var args = getBrowserArgs(browser, url);
+  // Extension directory
+  var extDir = isPkg
+    ? path.join(path.dirname(process.execPath), 'tagflix-adblock')
+    : path.join(__dirname, 'dist-app', 'tagflix-adblock');
+
+  var profileDir = path.join(os.homedir(), '.tagflix', browser.name + '-profile');
+  var args = getBrowserArgs(browser, url, extDir);
 
   if (browser.engine === 'gecko') {
     var profilesDir = path.join(os.homedir(), '.tagflix', 'firefox-profiles');
@@ -142,8 +144,6 @@ function openBrowser(url) {
         fs.writeFileSync(profilesIni, '[General]\nStartWithLastProfile=0\n\n[Profile0]\nName=Tagflix\nIsRelative=1\nPath=tagflix\n');
       }
       if (!fs.existsSync(tagflixProfile)) fs.mkdirSync(tagflixProfile, { recursive: true });
-
-      // Inject autoconfig to block popups in Firefox
       var autoconfDir = path.join(tagflixProfile, 'defaults', 'pref');
       if (!fs.existsSync(autoconfDir)) fs.mkdirSync(autoconfDir, { recursive: true });
       fs.writeFileSync(path.join(autoconfDir, 'autoconfig.js'),
@@ -151,14 +151,11 @@ function openBrowser(url) {
         'pref("general.config.obscure_value", 0);\n' +
         'pref("general.config.sandbox_enabled", false);\n'
       );
-      // The actual blocking script
       fs.writeFileSync(path.join(tagflixProfile, 'tagflix-block.js'),
-        '// Tagflix popup blocker\n' +
         'try {\n' +
         '  var _origOpen = window.open;\n' +
         '  window.open = function() { return null; };\n' +
         '} catch(e) {}\n' +
-        '// Also block via Firefox prefs\n' +
         'try {\n' +
         '  lockPref("dom.popup_allowed_events", "");\n' +
         '  lockPref("dom.disable_open_during_load", true);\n' +
@@ -168,6 +165,16 @@ function openBrowser(url) {
     } catch (e) {}
     args.push('-Profile');
     args.push(tagflixProfile);
+  } else {
+    // Delete old profile so extension loads fresh (avoids cached disabled state)
+    try {
+      var extensionsDir = path.join(profileDir, 'Default', 'Extensions');
+      if (!fs.existsSync(extensionsDir)) {
+        // Fresh profile needed — force by deleting
+        fs.rmSync(profileDir, { recursive: true, force: true });
+      }
+    } catch (e) {}
+    args.push('--user-data-dir=' + profileDir);
   }
 
   var proc = spawn(browser.path, args, {
@@ -178,7 +185,6 @@ function openBrowser(url) {
 
   proc.unref();
 
-  // Exit when browser closes
   proc.on('exit', function () {
     setTimeout(function () { process.exit(0); }, 2000);
   });
@@ -187,12 +193,10 @@ function openBrowser(url) {
 function startServer() {
   var targetUrl = 'http://127.0.0.1:' + PORT;
 
-  // Check if server already running (another instance launched)
   http.get(targetUrl, function (res) {
     res.resume();
     openBrowser(targetUrl);
   }).on('error', function () {
-    // Server not running — create it
     var server = http.createServer(function (req, res) {
       try {
         var url = new URL(req.url, 'http://127.0.0.1:' + PORT);
@@ -226,7 +230,7 @@ function startServer() {
         http.get(targetUrl, function (res) {
           res.resume();
           if (res.statusCode === 200) {
-        openBrowser(targetUrl);
+            openBrowser(targetUrl);
           } else {
             setTimeout(checkReady, 200);
           }
