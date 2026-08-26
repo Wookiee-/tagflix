@@ -71,7 +71,7 @@ function RadioGroup<T extends string>(props: {
   onChange: (v: T) => void;
 }) {
   return (
-    <div class="flex flex-col gap-3">
+    <div class="flex flex-col gap-4">
       <For each={props.options}>
         {(opt) => {
           const selected = () => props.value === opt.id;
@@ -151,8 +151,8 @@ export default function SettingsPage() {
       </div>
 
       {/* ═══ Accent Colour ═══ */}
-      <div class="mb-20">
-        <div class="flex items-center gap-3 mb-6">
+      <div class="mb-28">
+        <div class="flex items-center gap-3 mb-8">
           <div class="w-8 h-8 rounded-lg flex items-center justify-center glass-card">
             <Palette size={16} style={{ color: 'var(--accent)' }} />
           </div>
@@ -162,11 +162,11 @@ export default function SettingsPage() {
           </div>
         </div>
         {/* Accent circle grid */}
-        <div class="flex gap-5 flex-wrap justify-center mb-4">
+        <div class="flex gap-6 flex-wrap justify-center mb-4">
           <For each={ACCENTS}>
             {(a) => (
               <button
-                class="w-11 h-11 rounded-full transition-all duration-200 hover:scale-110"
+                class="w-9 h-9 rounded-full transition-all duration-200 hover:scale-110"
                 style={{
                   background: a.id,
                   'box-shadow': accent() === a.id
@@ -185,8 +185,8 @@ export default function SettingsPage() {
       </div>
 
       {/* ═══ Skin ═══ */}
-      <div class="mb-20">
-        <div class="flex items-center gap-3 mb-6">
+      <div class="mb-28">
+        <div class="flex items-center gap-3 mb-8">
           <div class="w-8 h-8 rounded-lg flex items-center justify-center glass-card">
             <Paintbrush size={16} style={{ color: 'var(--accent)' }} />
           </div>
@@ -213,8 +213,8 @@ export default function SettingsPage() {
       </div>
 
       {/* ═══ Streaming Source ═══ */}
-      <div class="mb-20">
-        <div class="flex items-center gap-3 mb-6">
+      <div class="mb-28">
+        <div class="flex items-center gap-3 mb-8">
           <div class="w-8 h-8 rounded-lg flex items-center justify-center glass-card">
             <Globe size={16} style={{ color: 'var(--accent)' }} />
           </div>
@@ -235,8 +235,8 @@ export default function SettingsPage() {
       </div>
 
       {/* ═══ Player ═══ */}
-      <div class="mb-20">
-        <div class="flex items-center gap-3 mb-6">
+      <div class="mb-28">
+        <div class="flex items-center gap-3 mb-8">
           <div class="w-8 h-8 rounded-lg flex items-center justify-center glass-card">
             <MonitorPlay size={16} style={{ color: 'var(--accent)' }} />
           </div>
@@ -255,8 +255,8 @@ export default function SettingsPage() {
       </div>
 
       {/* ═══ Data ═══ */}
-      <div class="mb-20">
-        <div class="flex items-center gap-3 mb-6">
+      <div class="mb-28">
+        <div class="flex items-center gap-3 mb-8">
           <div class="w-8 h-8 rounded-lg flex items-center justify-center glass-card">
             <Trash2 size={16} class="text-red-400" />
           </div>
@@ -285,8 +285,8 @@ export default function SettingsPage() {
       </div>
 
       {/* ═══ About ═══ */}
-      <div class="mb-20">
-        <div class="flex items-center gap-3 mb-6">
+      <div class="mb-28">
+        <div class="flex items-center gap-3 mb-8">
           <div class="w-8 h-8 rounded-lg flex items-center justify-center glass-card">
             <Sparkles size={16} style={{ color: 'var(--accent)' }} />
           </div>
