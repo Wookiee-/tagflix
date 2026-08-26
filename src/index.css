@@ -285,6 +285,30 @@ button {
   min-width: 44px;
 }
 
+/* ═══ Mobile-specific helpers ═══ */
+@media (max-width: 767px) {
+  .hide-mobile {
+    display: none !important;
+  }
+  .mobile-stack {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+  .mobile-full {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}
+
+/* ═══ Hide scrollbars on touch ═══ */
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 /* ═══ Horizontal scroll row for TV ═══ */
 .tv-scroll-row {
   display: flex;

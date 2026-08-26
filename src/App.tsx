@@ -172,7 +172,7 @@ export default function App(props: { children?: JSX.Element }) {
       </Show>
 
       {/* ═══ Main Content ═══ */}
-      <div class="flex-1 h-full overflow-x-hidden overflow-y-auto relative">
+      <div class="flex-1 h-full overflow-x-hidden overflow-y-auto relative" style={{ 'padding-bottom': !isPlayer() && isMobile() ? '60px' : '0' }}>
         {props.children}
       </div>
 
@@ -181,21 +181,26 @@ export default function App(props: { children?: JSX.Element }) {
         <nav
           class="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around safe-bottom glass-strong"
           style={{
-            height: '64px',
+            height: '60px',
             'border-top': '1px solid rgba(255,255,255,0.06)',
+            'padding-bottom': 'env(safe-area-inset-bottom, 0px)',
           }}
         >
           {MOBILE_NAV.map((item) => {
             const Icon = item.icon;
+            const active = isActive(item.path);
             return (
               <A
                 href={item.path}
-                class="flex flex-col items-center gap-1 py-2 px-3 tv-focusable"
-                style={{ color: isActive(item.path) ? 'var(--accent)' : 'var(--text)' }}
+                class="flex flex-col items-center gap-0.5 py-2 px-4 min-w-[56px] tv-focusable relative"
+                style={{ color: active ? 'var(--accent)' : 'var(--text)' }}
                 tabindex="0"
               >
-                <Icon size={22} />
-                <span class="text-[11px] font-semibold">{item.name}</span>
+                <Icon size={22} strokeWidth={active ? 2.5 : 1.8} />
+                <span class="text-[10px] font-semibold" style={{ opacity: active ? 1 : 0.6 }}>{item.name}</span>
+                <Show when={active}>
+                  <div class="absolute -top-0.5 left-1/2 -translate-x-1/2 w-5 h-0.5 rounded-full" style={{ background: 'var(--accent)' }} />
+                </Show>
               </A>
             );
           })}

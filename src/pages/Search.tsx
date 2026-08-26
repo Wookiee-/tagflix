@@ -30,7 +30,7 @@ export default function SearchPage() {
           <input
             type="text"
             placeholder="Search movies and TV shows..."
-            class="w-full pl-12 pr-4 py-3.5 rounded-xl text-sm font-medium outline-none transition-all glass-card focus:ring-2"
+            class="w-full pl-11 pr-4 py-3 rounded-xl text-sm font-medium outline-none transition-all glass-card focus:ring-2"
             style={{
               color: 'var(--text-white)',
               'ring-color': 'var(--accent)',

@@ -239,19 +239,19 @@ export default function DetailPage() {
               </div>
 
               {/* Content */}
-              <div class="relative px-6 md:px-12 -mt-52 z-10 pb-12">
-                <div class="flex gap-6 md:gap-8">
+              <div class="relative px-4 md:px-12 -mt-32 md:-mt-52 z-10 pb-12">
+                <div class="flex gap-4 md:gap-8">
                   {/* Poster */}
                   <Show when={data.poster_path}>
-                    <div class="shrink-0 w-[120px] md:w-[170px] aspect-[2/3] rounded-xl overflow-hidden shadow-2xl"
+                    <div class="shrink-0 w-[100px] md:w-[170px] aspect-[2/3] rounded-xl overflow-hidden shadow-2xl"
                       style={{ 'box-shadow': '0 12px 40px rgba(0,0,0,0.6)' }}>
                       <img src={imageUrl(data.poster_path, 'w342')} alt="" class="w-full h-full object-cover" />
                     </div>
                   </Show>
 
                   {/* Info */}
-                  <div class="flex-1 pt-16 md:pt-20">
-                    <h1 class="text-3xl md:text-4xl font-black mb-3 leading-tight tracking-tight text-white">
+                  <div class="flex-1 pt-8 md:pt-20">
+                    <h1 class="text-xl md:text-4xl font-black mb-2 md:mb-3 leading-tight tracking-tight text-white">
                       {mediaTitle(data)}
                     </h1>
 
@@ -278,7 +278,7 @@ export default function DetailPage() {
 
                     {/* Genres inline */}
                     <Show when={data.genres?.length}>
-                      <div class="flex items-center gap-2 mb-3 text-sm flex-wrap">
+                      <div class="flex items-center gap-1.5 md:gap-2 mb-3 text-xs md:text-sm flex-wrap">
                         <For each={data.genres}>
                           {(g, i) => (
                             <span class="text-white/50 font-medium">
@@ -298,7 +298,7 @@ export default function DetailPage() {
                     </Show>
 
                     {/* Action buttons */}
-                    <div class="flex gap-3 flex-wrap mb-8">
+                    <div class="flex gap-2 md:gap-3 flex-wrap mb-6 md:mb-8">
                       <button class="btn-primary btn-sm" onClick={() => playWithSource()}>
                         <Play size={16} fill="white" /> Play
                       </button>
@@ -314,7 +314,7 @@ export default function DetailPage() {
 
                 {/* Cast - circular photos */}
                 <Show when={topCast().length > 0}>
-                  <div class="mt-8">
+                  <div class="mt-6 md:mt-8">
                     <h3 class="text-xs font-bold mb-4 uppercase tracking-widest text-white/30">Cast</h3>
                     <div class="flex gap-2 overflow-x-auto pb-3">
                       <For each={topCast()}>

@@ -34,7 +34,7 @@ function HeroCarousel(props: { items: TMDBMedia[] }) {
 
   return (
     <div
-      class="relative w-full h-[65vh] min-h-[450px] max-h-[700px] overflow-hidden mb-6"
+      class="relative w-full h-[50vh] md:h-[65vh] min-h-[320px] md:min-h-[450px] max-h-[700px] overflow-hidden mb-6"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
@@ -68,14 +68,14 @@ function HeroCarousel(props: { items: TMDBMedia[] }) {
             }} />
 
             {/* Content */}
-            <div class="absolute bottom-0 left-0 p-8 md:p-14 max-w-3xl z-10">
+            <div class="absolute bottom-0 left-0 p-4 md:p-14 max-w-3xl z-10">
               <div class="mb-3">
                 <span class="text-[11px] font-bold uppercase tracking-[0.2em] px-3 py-1 rounded-md glass-strong text-white/70">
                   Featured
                 </span>
               </div>
 
-              <h1 class="text-4xl md:text-6xl font-black mb-3 leading-[1.05] tracking-tight text-white drop-shadow-lg">
+              <h1 class="text-2xl md:text-6xl font-black mb-2 md:mb-3 leading-[1.05] tracking-tight text-white drop-shadow-lg">
                 {mediaTitle(item)}
               </h1>
 
@@ -116,16 +116,16 @@ function HeroCarousel(props: { items: TMDBMedia[] }) {
         )}
       </For>
 
-      {/* Navigation arrows */}
+      {/* Navigation arrows - hidden on mobile */}
       <button
-        class="absolute left-4 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full flex items-center justify-center bg-black/40 backdrop-blur-md text-white/80 hover:text-white hover:bg-black/60 transition-all border border-white/10 tv-focusable"
+        class="absolute left-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 md:w-12 md:h-12 rounded-full items-center justify-center bg-black/40 backdrop-blur-md text-white/80 hover:text-white hover:bg-black/60 transition-all border border-white/10 tv-focusable hidden md:flex"
         tabIndex="0"
         onClick={() => go(-1)}
       >
         <ChevronLeft size={24} />
       </button>
       <button
-        class="absolute right-4 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full flex items-center justify-center bg-black/40 backdrop-blur-md text-white/80 hover:text-white hover:bg-black/60 transition-all border border-white/10 tv-focusable"
+        class="absolute right-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 md:w-12 md:h-12 rounded-full items-center justify-center bg-black/40 backdrop-blur-md text-white/80 hover:text-white hover:bg-black/60 transition-all border border-white/10 tv-focusable hidden md:flex"
         tabIndex="0"
         onClick={() => go(1)}
       >
