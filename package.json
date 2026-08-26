@@ -14,6 +14,7 @@
     "preview": "vite preview",
     "start": "node server.cjs",
     "package": "vite build && node build-pkg.js",
+    "installer": "vite build && node build-pkg.js && iscc tagflix-installer.iss",
     "cap:init": "npx cap init tagflix com.tagflix.app --web-dir dist",
     "cap:add": "npx cap add android",
     "cap:sync": "npx cap sync",
