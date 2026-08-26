@@ -46,7 +46,6 @@ public class MainActivity extends BridgeActivity {
                 );
             }
         } else {
-            // Legacy immersive mode for older devices
             getWindow().getDecorView().setSystemUiVisibility(
                 View.SYSTEM_UI_FLAG_LAYOUT_STABLE
                 | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
@@ -57,36 +56,37 @@ public class MainActivity extends BridgeActivity {
             );
         }
 
-        // Configure WebView AFTER Capacitor creates it — DO NOT overwrite
-        // Capacitor's WebChromeClient/WebViewClient or the bridge breaks
+        // Configure WebView AFTER Capacitor creates it
         WebView webView = getBridge().getWebView();
         if (webView != null) {
             WebSettings settings = webView.getSettings();
+
+            // Core settings
             settings.setJavaScriptEnabled(true);
             settings.setDomStorageEnabled(true);
             settings.setDatabaseEnabled(true);
             settings.setAllowFileAccess(true);
             settings.setAllowContentAccess(true);
+            settings.setAllowFileAccessFromFileURLs(true);
+            settings.setAllowUniversalAccessFromFileURLs(true);
+
+            // Video streaming performance
             settings.setMediaPlaybackRequiresUserGesture(false);
             settings.setLoadWithOverviewMode(true);
             settings.setUseWideViewPort(true);
             settings.setSupportZoom(false);
             settings.setBuiltInZoomControls(false);
             settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
-            settings.setCacheMode(WebSettings.LOAD_DEFAULT);
+            settings.setCacheMode(WebSettings.LOAD_NO_CACHE);
             settings.setBlockNetworkImage(false);
-
-            // Streaming performance
-            settings.setAllowFileAccessFromFileURLs(true);
-            settings.setAllowUniversalAccessFromFileURLs(true);
 
             // Hardware acceleration for video
             webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
 
-            // Preload iframe content for faster startup
-            webView.setInitialScale(100);
+            // Force GPU rendering for faster video decode
+            webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
 
-            // DO NOT set custom WebChromeClient or WebViewClient here
+            // DO NOT set custom WebChromeClient or WebViewClient
             // Capacitor sets its own — overwriting them breaks the JS bridge
         }
     }
