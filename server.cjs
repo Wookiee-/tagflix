@@ -96,13 +96,14 @@ function getBrowserArgs(browser, url) {
     args.push('--height=720');
     args.push(url);
   } else {
-    args.push('--new-window');
-    args.push('--window-name=tagflix');
     args.push('--app=' + url);
     args.push('--window-size=1280,720');
     args.push('--window-position=0,0');
     args.push('--no-first-run');
     args.push('--no-default-browser-check');
+    args.push('--disable-restore-session-state');
+    args.push('--disable-session-crashed-bubble');
+    args.push('--no-sandbox');
     args.push('--disable-sync');
     // Load Tagflix ad-block extension (blocks popups inside cross-origin iframes)
     var extDir = isPkg
