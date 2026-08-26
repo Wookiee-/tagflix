@@ -71,16 +71,7 @@ export default function IframePlayer(props: Props) {
         style={{ opacity: loaded() ? 1 : 0 }}
       />
 
-      {/* Back button — above iframe */}
-      <Show when={loaded() && props.onBack}>
-        <button
-          class="absolute top-4 left-4 z-[60] w-10 h-10 rounded-full flex items-center justify-center text-white/80 hover:text-white transition-colors"
-          style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)' }}
-          onClick={props.onBack}
-        >
-          ←
-        </button>
-      </Show>
+
     </div>
   );
 }

@@ -1,6 +1,6 @@
-import { createSignal, createResource, Show, For } from 'solid-js';
+import { createSignal, createResource, Show, For, onCleanup } from 'solid-js';
 import { useNavigate, useLocation } from '@solidjs/router';
-import { ArrowLeft, MonitorPlay, List, ChevronDown } from 'lucide-solid';
+import { ArrowLeft, MonitorPlay, List } from 'lucide-solid';
 import IframePlayer from '../components/IframePlayer';
 import { SOURCES, getSource } from '../lib/sources';
 import { saveContinueWatching } from '../lib/storage';
@@ -15,12 +15,25 @@ export default function PlayerPage() {
   const [title] = createSignal(state()?.title || '');
   const [showSources, setShowSources] = createSignal(false);
   const [showEpisodes, setShowEpisodes] = createSignal(false);
+  const [controlsVisible, setControlsVisible] = createSignal(true);
   const [activeSeason, setActiveSeason] = createSignal(state()?.activeSeason || state()?.season || 1);
   const [episodes, setEpisodes] = createSignal<TMDBEpisode[]>(state()?.episodes || []);
   const [seasons] = createSignal<TMDBSeason[]>(state()?.seasons || []);
 
+  let hideTimer: ReturnType<typeof setTimeout>;
+
+  const showControls = () => {
+    setControlsVisible(true);
+    clearTimeout(hideTimer);
+    hideTimer = setTimeout(() => {
+      if (!showSources() && !showEpisodes()) setControlsVisible(false);
+    }, 3000);
+  };
+
+  onCleanup(() => clearTimeout(hideTimer));
+
   // Fetch episodes when season changes
-  const [seasonData] = createResource(
+  createResource(
     () => ({ id: state()?.tmdbId, season: activeSeason(), mediaType: state()?.mediaType }),
     async ({ id, season, mediaType }) => {
       if (mediaType !== 'tv' || !id) return;
@@ -95,40 +108,57 @@ export default function PlayerPage() {
     setActiveSeason(seasonNum);
   };
 
+  const toggleEpisodes = () => {
+    setShowEpisodes(!showEpisodes());
+    setShowSources(false);
+    showControls();
+  };
+
+  const toggleSources = () => {
+    setShowSources(!showSources());
+    setShowEpisodes(false);
+    showControls();
+  };
+
   return (
-    <div class="fixed inset-0 z-[50] bg-black">
+    <div class="fixed inset-0 z-[50] bg-black" onMouseMove={showControls} onTouchStart={showControls}>
       <Show when={embedUrl()}>
         <IframePlayer url={embedUrl()} title={title()} onBack={handleBack} />
       </Show>
 
-      {/* Top bar controls */}
-      <div class="absolute top-0 left-0 right-0 z-[60] flex items-center gap-3 p-3 md:p-4 bg-gradient-to-b from-black/80 to-transparent">
-        <button
-          class="w-10 h-10 rounded-full flex items-center justify-center bg-black/50 backdrop-blur-sm text-white hover:bg-black/70 transition-colors"
-          onClick={handleBack}
+      {/* Auto-hiding top bar — small, positioned to avoid overlapping iframe controls */}
+      <Show when={controlsVisible()}>
+        <div
+          class="absolute top-0 left-0 right-0 z-[60] flex items-center gap-2 p-2 md:p-3 transition-opacity duration-300"
+          style={{ opacity: controlsVisible() ? 1 : 0, background: 'linear-gradient(to bottom, rgba(0,0,0,0.7) 0%, transparent 100%)' }}
         >
-          <ArrowLeft size={20} />
-        </button>
-        <span class="text-white text-sm font-semibold truncate flex-1">{title()}</span>
-
-        <Show when={state()?.mediaType === 'tv' && state()?.episodes?.length}>
           <button
-            class="w-10 h-10 rounded-full flex items-center justify-center bg-black/50 backdrop-blur-sm text-white hover:bg-black/70 transition-colors"
-            onClick={() => { setShowEpisodes(!showEpisodes()); setShowSources(false); }}
+            class="w-9 h-9 rounded-full flex items-center justify-center bg-black/50 backdrop-blur-sm text-white/80 hover:text-white hover:bg-black/70 transition-colors shrink-0"
+            onClick={handleBack}
           >
-            <List size={20} />
+            <ArrowLeft size={18} />
           </button>
-        </Show>
+          <span class="text-white/90 text-xs font-medium truncate flex-1">{title()}</span>
 
-        <button
-          class="w-10 h-10 rounded-full flex items-center justify-center bg-black/50 backdrop-blur-sm text-white hover:bg-black/70 transition-colors"
-          onClick={() => { setShowSources(!showSources()); setShowEpisodes(false); }}
-        >
-          <MonitorPlay size={20} />
-        </button>
-      </div>
+          <Show when={state()?.mediaType === 'tv'}>
+            <button
+              class="w-9 h-9 rounded-full flex items-center justify-center bg-black/50 backdrop-blur-sm text-white/70 hover:text-white hover:bg-black/70 transition-colors shrink-0"
+              onClick={toggleEpisodes}
+            >
+              <List size={16} />
+            </button>
+          </Show>
 
-      {/* Source Picker */}
+          <button
+            class="w-9 h-9 rounded-full flex items-center justify-center bg-black/50 backdrop-blur-sm text-white/70 hover:text-white hover:bg-black/70 transition-colors shrink-0"
+            onClick={toggleSources}
+          >
+            <MonitorPlay size={16} />
+          </button>
+        </div>
+      </Show>
+
+      {/* Source Picker — bottom panel */}
       <Show when={showSources()}>
         <div
           class="absolute bottom-0 left-0 right-0 z-[60] p-4 bg-gradient-to-t from-black/95 via-black/90 to-transparent"
@@ -158,7 +188,7 @@ export default function PlayerPage() {
         </div>
       </Show>
 
-      {/* Episode Picker */}
+      {/* Episode Picker — bottom panel */}
       <Show when={showEpisodes()}>
         <div
           class="absolute bottom-0 left-0 right-0 z-[60] max-h-[60vh] overflow-y-auto p-4 bg-gradient-to-t from-black/95 via-black/90 to-transparent"
