@@ -101,7 +101,6 @@ function getBrowserArgs(browser, url, extDir) {
     args.push('--no-default-browser-check');
     args.push('--disable-restore-session-state');
     args.push('--disable-session-crashed-bubble');
-    args.push('--no-sandbox');
     args.push('--disable-sync');
 
     // Load ad-block extension — works with --user-data-dir when both flags are set
