@@ -121,7 +121,7 @@ export default function App(props: { children?: JSX.Element }) {
       {/* ═══ Desktop Sidebar ═══ */}
       <Show when={!isPlayer() && !isMobile()}>
         <aside
-          class="w-[72px] shrink-0 flex flex-col items-center py-5 gap-2 overflow-y-auto glass-strong"
+          class="w-[72px] shrink-0 flex flex-col items-center py-5 gap-2 overflow-x-hidden overflow-y-auto glass-strong"
           style={{ 'border-right': '1px solid rgba(255,255,255,0.06)' }}
         >
           {/* Logo */}
@@ -149,9 +149,6 @@ export default function App(props: { children?: JSX.Element }) {
                 tabindex="0"
               >
                 <Icon size={22} />
-                <span class="absolute left-14 px-3 py-1.5 rounded-lg text-sm font-semibold text-white whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 glass-strong">
-                  {item.name}
-                </span>
               </A>
             );
           })}
@@ -160,7 +157,7 @@ export default function App(props: { children?: JSX.Element }) {
 
           <A
             href="/settings"
-            class="w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-200 relative group hover:scale-105 tv-focusable"
+            class="w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-200 hover:scale-105 tv-focusable"
             style={{
               color: isActive('/settings') ? 'var(--accent)' : 'var(--text)',
               background: isActive('/settings') ? 'var(--accent)' : 'transparent',
@@ -170,9 +167,6 @@ export default function App(props: { children?: JSX.Element }) {
             tabindex="0"
           >
             <Settings size={22} />
-            <span class="absolute left-14 px-3 py-1.5 rounded-lg text-sm font-semibold text-white whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 glass-strong">
-              Settings
-            </span>
           </A>
         </aside>
       </Show>
