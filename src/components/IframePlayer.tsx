@@ -27,11 +27,8 @@ export default function IframePlayer(props: Props) {
   const [browserOpen, setBrowserOpen] = createSignal(false);
   let appStateHandle: any = null;
 
-  /** Build the proxied URL that injects CSP sandbox + popup blocker */
-  const proxyUrl = () => {
-    const base = window.location.origin;
-    return base + '/proxy?url=' + encodeURIComponent(props.url);
-  };
+  // Load source directly
+  const iframeSrc = () => props.url;
 
   onMount(() => {
     if (isNativeAndroid()) {
@@ -39,21 +36,24 @@ export default function IframePlayer(props: Props) {
       return;
     }
 
-    // Desktop: block popups from the parent window too (backup)
-    (window as any).__origOpen = window.open;
-    window.open = function () {
-      return {
-        focus: function () {},
-        blur: function () {},
-        close: function () {},
-        closed: false,
-        location: { href: '' },
-        postMessage: function () {},
-      } as any;
-    };
+    // Desktop: Invisible shield — captures the first click (ad redirect trigger)
+    // then removes itself so all subsequent clicks go straight to the player.
+    var shield = document.createElement('div');
+    shield.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;z-index:99;cursor:pointer;background:transparent;pointer-events:auto;';
+    shield.addEventListener('click', function (e) {
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      // Temporarily kill window.open for the duration of the ad script
+      var origOpen = window.open;
+      window.open = function () { return null as any; };
+      // Remove shield — next click goes to iframe
+      shield.remove();
+      setTimeout(function () { window.open = origOpen; }, 800);
+    }, true);
+    document.body.appendChild(shield);
 
     onCleanup(() => {
-      window.open = (window as any).__origOpen || window.open;
+      if (shield.parentNode) shield.parentNode.removeChild(shield);
       if (appStateHandle) appStateHandle.remove();
     });
   });
@@ -170,7 +170,7 @@ export default function IframePlayer(props: Props) {
       </Show>
 
       <iframe
-        src={proxyUrl()}
+        src={iframeSrc()}
         class="w-full h-full border-0"
         allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
         allowFullscreen

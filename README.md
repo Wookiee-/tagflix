@@ -17,7 +17,7 @@ An open-source media aggregator built with **SolidJS + TypeScript**.
 
 - **Stremio-inspired UI** — sidebar navigation, media rows, modern glass design
 - **Embedded iframe players** — no proxy server needed
-- **Multiple streaming sources** — VidCore, VidKing (add more in `src/lib/sources.ts`)
+- **Multiple streaming sources** — VidCore embedded player
 - **Season/episode browser** — rich episode cards with thumbnails and ratings
 - **Continue watching** — tracks your progress across movies and TV shows
 - **Favourites / library** — save content for later
@@ -128,7 +128,6 @@ build-pkg.js           # Build script (pkg + PE header patch)
 | Source | URL Pattern | Status |
 |--------|-------------|--------|
 | **VidCore** | `vidcore.io/{type}/{id}/{season}/{episode}` | ✅ Primary |
-| **VidKing** | `vidking.net/embed/{type}/{id}` | ✅ Fallback |
 
 Add more sources in `src/lib/sources.ts`.
 

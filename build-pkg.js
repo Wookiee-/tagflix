@@ -58,13 +58,6 @@ if (magic === 0x20B || magic === 0x10B) {
 console.log('[build] copying dist/ into dist-app/...');
 fs.cpSync(DIST, path.join(DIST_APP, 'dist'), { recursive: true });
 
-// Copy ad-block extension into dist-app/
-var extRoot = path.join(ROOT, 'tagflix-adblock');
-var extDst = path.join(DIST_APP, 'tagflix-adblock');
-if (fs.existsSync(extRoot)) {
-  fs.cpSync(extRoot, extDst, { recursive: true });
-  console.log('[build] copied tagflix-adblock extension');
-}
 
 const exeSize = fs.statSync(dstExe).size;
 console.log(`[build] done! tagflix.exe: ${(exeSize / 1024 / 1024).toFixed(1)}MB`);
