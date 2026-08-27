@@ -16,8 +16,7 @@ An open-source media aggregator built with **SolidJS + TypeScript**.
 ## Features
 
 - **Stremio-inspired UI** — sidebar navigation, media rows, modern glass design
-- **Embedded iframe players** — no proxy server needed
-- **Multiple streaming sources** — VidCore embedded player
+- **VidCore player** — embedded iframe with built-in ad popup blocking
 - **Season/episode browser** — rich episode cards with thumbnails and ratings
 - **Continue watching** — tracks your progress across movies and TV shows
 - **Favourites / library** — save content for later
@@ -109,7 +108,7 @@ src/
   components/
     MediaCard.tsx       # Movie/TV card component
     MediaRow.tsx        # Horizontal scroll row
-    IframePlayer.tsx    # Embedded iframe player
+    IframePlayer.tsx    # Embedded iframe player with ad popup blocking
   pages/
     Home.tsx            # Hero + trending + continue watching
     Detail.tsx          # Movie/TV info + source picker + seasons
@@ -122,6 +121,13 @@ src/
 server.cjs             # Local server + browser launcher
 build-pkg.js           # Build script (pkg + PE header patch)
 ```
+
+## Ad Popup Blocking
+
+VidCore serves ads via transparent overlay divs and `window.open` calls inside the iframe. Tagflix blocks these at two levels:
+
+1. **Shield overlay** — a transparent div sits on top of the iframe and catches the first click (which triggers the ad redirect). It blocks `window.open` for 800ms, then removes itself so subsequent clicks pass through to the player.
+2. **`window.open` override** — injected into the parent page to catch any popup attempts that bypass the shield.
 
 ## Embed Sources
 
