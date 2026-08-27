@@ -27,13 +27,19 @@ export default function IframePlayer(props: Props) {
   const [browserOpen, setBrowserOpen] = createSignal(false);
   let appStateHandle: any = null;
 
+  /** Build the proxied URL that injects CSP sandbox + popup blocker */
+  const proxyUrl = () => {
+    const base = window.location.origin;
+    return base + '/proxy?url=' + encodeURIComponent(props.url);
+  };
+
   onMount(() => {
     if (isNativeAndroid()) {
       openInBrowser();
       return;
     }
 
-    // Desktop: block popups from VidCore
+    // Desktop: block popups from the parent window too (backup)
     (window as any).__origOpen = window.open;
     window.open = function () {
       return {
@@ -164,7 +170,7 @@ export default function IframePlayer(props: Props) {
       </Show>
 
       <iframe
-        src={props.url}
+        src={proxyUrl()}
         class="w-full h-full border-0"
         allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
         allowFullscreen

@@ -182,6 +182,100 @@ function startServer() {
     var server = http.createServer(function (req, res) {
       try {
         var url = new URL(req.url, 'http://127.0.0.1:' + PORT);
+
+        // ─── VidCore proxy: inject CSP sandbox to block popups ───
+        if (url.pathname === '/proxy') {
+          var target = url.searchParams.get('url');
+          if (!target) { res.writeHead(400); res.end('missing url'); return; }
+
+          var parsedTarget = new URL(target);
+          var referer = parsedTarget.origin + '/';
+
+          http.get(target, {
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+              'Referer': referer,
+              'Accept': 'text/html,application/xhtml+xml',
+            },
+          }, function (proxyRes) {
+            // Only inject into HTML responses
+            var ct = proxyRes.headers['content-type'] || '';
+            if (ct.indexOf('text/html') === -1 && ct.indexOf('application/xhtml') === -1) {
+              // Pass through non-HTML (JS, CSS, images) with CORS
+              var headers = {};
+              Object.keys(proxyRes.headers).forEach(function (k) {
+                if (k !== 'content-security-policy' && k !== 'x-frame-options') headers[k] = proxyRes.headers[k];
+              });
+              headers['access-control-allow-origin'] = '*';
+              res.writeHead(proxyRes.statusCode, headers);
+              proxyRes.pipe(res);
+              return;
+            }
+
+            var chunks = [];
+            proxyRes.on('data', function (c) { chunks.push(c); });
+            proxyRes.on('end', function () {
+              var html = Buffer.concat(chunks).toString('utf8');
+
+              // 1) CSP sandbox blocks window.open() at browser level.
+              //    VidCore checks the <iframe sandbox=...> HTML attribute,
+              //    NOT CSP-level sandbox — so it doesn't detect this.
+              var sandboxMeta = '<meta http-equiv="Content-Security-Policy" content="sandbox allow-scripts allow-same-origin allow-forms allow-modals">';
+
+              // 2) window.open override as a safety net
+              var blockerScript = '<script>
+' +
+                '(function(){
+' +
+                '  window.open=function(){return{focus:function(){},blur:function(){},close:function(){},closed:false,location:{href:""},postMessage:function(){}};};
+' +
+                '  document.addEventListener("click",function(e){
+' +
+                '    var t=e.target;
+' +
+                '    while(t&&t!==document){
+' +
+                '      if(t.tagName==="A"&&t.target==="_blank"){e.preventDefault();e.stopPropagation();return;}
+' +
+                '      t=t.parentNode;
+' +
+                '    }
+' +
+                '  },true);
+' +
+                '})();
+' +
+                '</script>';
+
+              // Inject right after <head> or at the start
+              if (html.indexOf('<head') !== -1) {
+                html = html.replace(/(<head[^>]*>)/i, '$1' + sandboxMeta + blockerScript);
+              } else if (html.indexOf('<body') !== -1) {
+                html = html.replace(/(<body[^>]*>)/i, sandboxMeta + blockerScript + '$1');
+              } else {
+                html = sandboxMeta + blockerScript + html;
+              }
+
+              // Strip original CSP and X-Frame-Options from upstream
+              var headers = {};
+              Object.keys(proxyRes.headers).forEach(function (k) {
+                var lk = k.toLowerCase();
+                if (lk === 'content-security-policy' || lk === 'x-frame-options') return;
+                headers[k] = proxyRes.headers[k];
+              });
+              headers['content-type'] = 'text/html; charset=utf-8';
+              headers['access-control-allow-origin'] = '*';
+              res.writeHead(200, headers);
+              res.end(html);
+            });
+          }).on('error', function (err) {
+            res.writeHead(502);
+            res.end('proxy error: ' + err.message);
+          });
+          return;
+        }
+
+        // ─── Static file serving ───
         var filePath = path.join(distDir, url.pathname === '/' ? 'index.html' : url.pathname);
 
         if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
