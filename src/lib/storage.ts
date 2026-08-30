@@ -111,7 +111,10 @@ export function setSkin(skin: string): void {
 }
 
 export function getActiveSource(): string {
-  return getItem<string>('active_source', 'vidcore');
+  const stored = getItem<string>('active_source', 'cinesrc');
+  // Migrate old ids -> cinesrc
+  if (stored === 'vidcore' || stored === 'vidsrc' || stored === 'moviesapi' || stored === 'vidlink') return 'cinesrc';
+  return stored;
 }
 
 export function setActiveSource(sourceId: string): void {

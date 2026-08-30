@@ -16,7 +16,7 @@ An open-source media aggregator built with **SolidJS + TypeScript**.
 ## Features
 
 - **Stremio-inspired UI** — sidebar navigation, media rows, modern glass design
-- **VidCore player** — embedded iframe with built-in ad popup blocking
+- **CineSrc player** — embedded iframe with built-in ad popup blocking
 - **Season/episode browser** — rich episode cards with thumbnails and ratings
 - **Continue watching** — tracks your progress across movies and TV shows
 - **Favourites / library** — save content for later
@@ -124,16 +124,16 @@ build-pkg.js           # Build script (pkg + PE header patch)
 
 ## Ad Popup Blocking
 
-VidCore serves ads via transparent overlay divs and `window.open` calls inside the iframe. Tagflix blocks these at two levels:
+CineSrc (and previous providers) serve ads via `window.open` popups inside the iframe. Tagflix blocks these at two levels:
 
-1. **Shield overlay** — a transparent div sits on top of the iframe and catches the first click (which triggers the ad redirect). It blocks `window.open` for 800ms, then removes itself so subsequent clicks pass through to the player.
-2. **`window.open` override** — injected into the parent page to catch any popup attempts that bypass the shield.
+1. **Shield overlay** — a transparent div sits on top of the iframe and catches the first click (which triggers the ad redirect). It permanently blocks `window.open` via interval guard + `defineProperty` freeze, then removes itself so subsequent clicks pass through to the player.
+2. **`window.open` override** — hardened global override in `index.html` with interval guard and `_blank` anchor blocking.
 
 ## Embed Sources
 
 | Source | URL Pattern | Status |
 |--------|-------------|--------|
-| **VidCore** | `vidcore.io/{type}/{id}/{season}/{episode}` | ✅ Primary |
+| **CineSrc** | `cinesrc.st/embed/{movie,tv}/{id}?s={season}&e={episode}` | ✅ Primary |
 
 Add more sources in `src/lib/sources.ts`.
 

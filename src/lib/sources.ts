@@ -13,11 +13,11 @@ export interface StreamSource {
 
 export const SOURCES: StreamSource[] = [
   {
-    id: 'vidcore',
-    name: 'VidCore',
-    movieUrl: (tmdbId) => `https://vidcore.io/movie/${tmdbId}?autoPlay=true`,
+    id: 'cinesrc',
+    name: 'CineSrc',
+    movieUrl: (tmdbId) => `https://cinesrc.st/embed/movie/${tmdbId}`,
     tvUrl: (tmdbId, season, episode) =>
-      `https://vidcore.io/tv/${tmdbId}/${season}/${episode}?autoPlay=true`,
+      `https://cinesrc.st/embed/tv/${tmdbId}?s=${season}&e=${episode}`,
   },
 ];
 

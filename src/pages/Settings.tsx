@@ -187,7 +187,7 @@ export default function SettingsPage() {
                   </div>
                   <div class="flex-1">
                     <p class="text-sm font-bold" style={{ color: selected() ? 'white' : 'var(--text)' }}>{s.name}</p>
-                    <p class="text-xs text-white/30 mt-0.5">{s.id === 'vidcore' ? 'Default — fast and reliable' : 'Alternative source'}</p>
+                    <p class="text-xs text-white/30 mt-0.5">{s.id === 'cinesrc' ? 'Default — minimal ads' : 'Alternative source'}</p>
                   </div>
                 </button>
               );

@@ -11,41 +11,57 @@
     <link rel="preconnect" href="https://image.tmdb.org" />
     <link rel="dns-prefetch" href="https://image.tmdb.org" />
     <!-- Preconnect to embed sources -->
-    <link rel="dns-prefetch" href="https://vidcore.io" />
-    <link rel="preconnect" href="https://vidcore.io" />
+    <link rel="dns-prefetch" href="https://cinesrc.st" />
+    <link rel="preconnect" href="https://cinesrc.st" />
     <title>Tagflix</title>
     <style>
       /* Prevent flash of unstyled content */
       body { background: #0c0b11; margin: 0; }
     </style>
-    <!-- Block all popups from iframes (VidCore ads) -->
+    <!-- Block all popups from iframes (CineSrc ads) — hardened -->
     <script>
       (function() {
-        // Override window.open globally — returns dummy object so scripts don't crash
-        window.open = function(url, target, features) {
+        var blockedOpen = function(url) {
           console.warn('[Tagflix] Blocked popup:', url);
-          return {
-            focus: function(){},
-            blur: function(){},
-            close: function(){},
-            closed: false,
-            location: { href: '' },
-            document: { write: function(){}, writeln: function(){} },
-            postMessage: function(){},
-          };
+          return null;
         };
+        // Permanent override — interval guard prevents ad script from restoring it
+        try { window.open = blockedOpen; } catch(e) {}
+        setInterval(function() {
+          if (window.open !== blockedOpen) {
+            try { window.open = blockedOpen; } catch(e) {}
+          }
+        }, 300);
+        // Also freeze where possible so `window.open = ...` silently fails
+        try {
+          Object.defineProperty(window, 'open', {
+            value: blockedOpen,
+            writable: false,
+            configurable: false
+          });
+        } catch(e) {}
         // Force landscape window size (works in --app mode)
         try { window.resizeTo(1280, 720); } catch(e) {}
-        // Block onclick-based popups via event listener removal
+        // Block anchor/form _blank vectors
         document.addEventListener('click', function(e) {
-          if (e.target && (e.target.tagName === 'A' || e.target.closest('a'))) {
-            var a = e.target.tagName === 'A' ? e.target : e.target.closest('a');
-            if (a && a.target === '_blank') {
-              e.preventDefault();
-              e.stopPropagation();
-            }
+          var a = e.target && (e.target.tagName === 'A' ? e.target : e.target.closest && e.target.closest('a'));
+          if (a && (a.target === '_blank' || a.getAttribute('target') === '_blank')) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (e.stopImmediatePropagation) e.stopImmediatePropagation();
           }
         }, true);
+        document.addEventListener('auxclick', function(e) {
+          var a = e.target && (e.target.tagName === 'A' ? e.target : e.target.closest && e.target.closest('a'));
+          if (a && a.target === '_blank') {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+        }, true);
+        // Prevent top-navigation hijacks via beforeunload (ads that do location.href)
+        window.addEventListener('beforeunload', function(e) {
+          // Only block if triggered very early without user intent — no-op to keep player navigations working
+        });
       })();
     </script>
   </head>

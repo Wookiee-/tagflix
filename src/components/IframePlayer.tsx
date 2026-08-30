@@ -36,23 +36,55 @@ export default function IframePlayer(props: Props) {
       return;
     }
 
-    // Desktop: Invisible shield — captures the first click (ad redirect trigger)
-    // then removes itself so all subsequent clicks go straight to the player.
+    // Hardened shield: permanent window.open block + sandbox + multi-event shield
+    // Previous shield only blocked 800ms and restored window.open — ads on 2nd click slipped through.
+    const origOpen = window.open;
+    const blockedOpen = function () {
+      console.warn('[Tagflix] Blocked popup');
+      return null as any;
+    };
+    // Permanent block for lifetime of player
+    try { (window as any).open = blockedOpen; } catch {}
+    // Guard: ad scripts often do `window.open = orig` — keep re-blocking every 200ms
+    const openGuard = setInterval(() => {
+      if ((window as any).open !== blockedOpen) {
+        try { (window as any).open = blockedOpen; } catch {}
+      }
+    }, 200);
+    // Best-effort freeze so assignments silently fail
+    try {
+      Object.defineProperty(window, 'open', {
+        value: blockedOpen,
+        writable: false,
+        configurable: false,
+      });
+    } catch {}
+
     var shield = document.createElement('div');
+    shield.id = 'tagflix-shield';
     shield.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;z-index:99;cursor:pointer;background:transparent;pointer-events:auto;';
-    shield.addEventListener('click', function (e) {
+    const shieldHandler = (e: Event) => {
       e.stopPropagation();
-      e.stopImmediatePropagation();
-      // Temporarily kill window.open for the duration of the ad script
-      var origOpen = window.open;
-      window.open = function () { return null as any; };
-      // Remove shield — next click goes to iframe
-      shield.remove();
-      setTimeout(function () { window.open = origOpen; }, 800);
-    }, true);
+      // @ts-ignore
+      if (e.stopImmediatePropagation) e.stopImmediatePropagation();
+      try { (window as any).open = blockedOpen; } catch {}
+      // First click is almost always the ad — consume it and drop shield so player becomes interactive.
+      // window.open stays blocked via openGuard, so subsequent ad clicks also get blocked.
+      if (shield.parentNode) shield.remove();
+    };
+    shield.addEventListener('click', shieldHandler, true);
+    shield.addEventListener('mousedown', shieldHandler, true);
+    shield.addEventListener('auxclick', shieldHandler, true);
+    shield.addEventListener('touchstart', shieldHandler as any, true);
     document.body.appendChild(shield);
 
     onCleanup(() => {
+      clearInterval(openGuard);
+      try {
+        Object.defineProperty(window, 'open', { value: origOpen, writable: true, configurable: true });
+      } catch {
+        try { (window as any).open = origOpen; } catch {}
+      }
       if (shield.parentNode) shield.parentNode.removeChild(shield);
       if (appStateHandle) appStateHandle.remove();
     });

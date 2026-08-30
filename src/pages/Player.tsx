@@ -1,10 +1,23 @@
-import { createSignal, createResource, Show, For, onCleanup } from 'solid-js';
+import { createSignal, createResource, Show, For, onMount, onCleanup } from 'solid-js';
 import { useNavigate, useLocation } from '@solidjs/router';
-import { ArrowLeft, MonitorPlay, List } from 'lucide-solid';
+import { ArrowLeft, MonitorPlay, List, Play, Pause, SkipForward, SkipBack } from 'lucide-solid';
 import IframePlayer from '../components/IframePlayer';
 import { SOURCES, getSource } from '../lib/sources';
 import { saveContinueWatching } from '../lib/storage';
 import { getSeasonEpisodes, type TMDBEpisode, type TMDBSeason } from '../lib/tmdb';
+
+/** Detect TV / Firestick / Android TV */
+function detectTv(): boolean {
+  try {
+    const ua = navigator.userAgent.toLowerCase();
+    return (
+      ua.includes('aft') || ua.includes('smart-tv') || ua.includes('googletv') ||
+      ua.includes('androidtv') || ua.includes('roku') || ua.includes('viera') ||
+      ua.includes('netcast') || ua.includes('tizen') || ua.includes('webos') ||
+      ua.includes('mibox') || ua.includes('chromecast')
+    );
+  } catch { return false; }
+}
 
 export default function PlayerPage() {
   const navigate = useNavigate();
@@ -20,17 +33,71 @@ export default function PlayerPage() {
   const [episodes, setEpisodes] = createSignal<TMDBEpisode[]>(state()?.episodes || []);
   const [seasons] = createSignal<TMDBSeason[]>(state()?.seasons || []);
 
+  const isTv = detectTv();
   let hideTimer: ReturnType<typeof setTimeout>;
 
   const showControls = () => {
     setControlsVisible(true);
     clearTimeout(hideTimer);
+    // TV: keep visible for 6s (longer for D-pad navigation)
+    // Desktop: 3s auto-hide
+    // Never auto-hide while a picker panel is open
     hideTimer = setTimeout(() => {
-      if (!showSources() && !showEpisodes()) setControlsVisible(false);
-    }, 3000);
+      if (showSources() || showEpisodes()) {
+        // Panel is open — reschedule instead of hiding
+        showControls();
+        return;
+      }
+      setControlsVisible(false);
+    }, isTv ? 6000 : 3000);
   };
 
-  onCleanup(() => clearTimeout(hideTimer));
+  // ─── D-Pad Key Handling for TV Remotes ───
+  const handleDpad = (e: KeyboardEvent) => {
+    const key = e.key;
+    if (!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Enter','Select','Play','Pause','MediaPlayPause','MediaFastForward','MediaRewind','Escape','Backspace'].includes(key)) return;
+
+    // Any D-pad / remote key re-shows controls
+    showControls();
+
+    // Seek left/right
+    if (key === 'ArrowLeft') {
+      e.preventDefault();
+      const iframe = document.querySelector('iframe') as HTMLIFrameElement;
+      if (iframe?.contentWindow) {
+        iframe.contentWindow.postMessage({ action: 'seek', offset: -10 }, '*');
+      }
+      return;
+    }
+    if (key === 'ArrowRight') {
+      e.preventDefault();
+      const iframe = document.querySelector('iframe') as HTMLIFrameElement;
+      if (iframe?.contentWindow) {
+        iframe.contentWindow.postMessage({ action: 'seek', offset: 10 }, '*');
+      }
+      return;
+    }
+
+    // Escape / Back — close panel or go back
+    if (key === 'Escape' || key === 'Backspace') {
+      e.preventDefault();
+      if (showSources()) { setShowSources(false); return; }
+      if (showEpisodes()) { setShowEpisodes(false); return; }
+      handleBack();
+      return;
+    }
+  };
+
+  onMount(() => {
+    if (isTv) {
+      window.addEventListener('keydown', handleDpad, { capture: true });
+    }
+  });
+
+  onCleanup(() => {
+    clearTimeout(hideTimer);
+    if (isTv) window.removeEventListener('keydown', handleDpad, { capture: true });
+  });
 
   // Fetch episodes when season changes
   createResource(
@@ -82,7 +149,7 @@ export default function PlayerPage() {
 
   const playEpisode = (ep: any) => {
     const s = state();
-    const sourceId = s?.sourceId || 'vidcore';
+    const sourceId = s?.sourceId || 'cinesrc';
     const source = getSource(sourceId);
     if (!source || !s) return;
 
@@ -129,11 +196,12 @@ export default function PlayerPage() {
       {/* Auto-hiding top bar — small, positioned to avoid overlapping iframe controls */}
       <Show when={controlsVisible()}>
         <div
-          class="absolute top-0 left-0 right-0 z-[60] flex items-center gap-2 p-2 md:p-3 transition-opacity duration-300"
+          class="player-controls absolute top-0 left-0 right-0 z-[60] flex items-center gap-2 p-2 md:p-3 transition-opacity duration-300"
           style={{ opacity: controlsVisible() ? 1 : 0, background: 'linear-gradient(to bottom, rgba(0,0,0,0.7) 0%, transparent 100%)' }}
         >
           <button
-            class="w-9 h-9 rounded-full flex items-center justify-center bg-black/50 backdrop-blur-sm text-white/80 hover:text-white hover:bg-black/70 transition-colors shrink-0"
+            class="tv-focusable w-9 h-9 rounded-full flex items-center justify-center bg-black/50 backdrop-blur-sm text-white/80 hover:text-white hover:bg-black/70 transition-colors shrink-0"
+            tabindex="0"
             onClick={handleBack}
           >
             <ArrowLeft size={18} />
@@ -142,7 +210,8 @@ export default function PlayerPage() {
 
           <Show when={state()?.mediaType === 'tv'}>
             <button
-              class="w-9 h-9 rounded-full flex items-center justify-center bg-black/50 backdrop-blur-sm text-white/70 hover:text-white hover:bg-black/70 transition-colors shrink-0"
+              class="tv-focusable w-9 h-9 rounded-full flex items-center justify-center bg-black/50 backdrop-blur-sm text-white/70 hover:text-white hover:bg-black/70 transition-colors shrink-0"
+              tabindex="0"
               onClick={toggleEpisodes}
             >
               <List size={16} />
@@ -150,7 +219,8 @@ export default function PlayerPage() {
           </Show>
 
           <button
-            class="w-9 h-9 rounded-full flex items-center justify-center bg-black/50 backdrop-blur-sm text-white/70 hover:text-white hover:bg-black/70 transition-colors shrink-0"
+            class="tv-focusable w-9 h-9 rounded-full flex items-center justify-center bg-black/50 backdrop-blur-sm text-white/70 hover:text-white hover:bg-black/70 transition-colors shrink-0"
+            tabindex="0"
             onClick={toggleSources}
           >
             <MonitorPlay size={16} />
@@ -161,8 +231,10 @@ export default function PlayerPage() {
       {/* Source Picker — bottom panel */}
       <Show when={showSources()}>
         <div
-          class="absolute bottom-0 left-0 right-0 z-[60] p-4 bg-gradient-to-t from-black/95 via-black/90 to-transparent"
+          class="player-controls absolute bottom-0 left-0 right-0 z-[60] p-4 bg-gradient-to-t from-black/95 via-black/90 to-transparent"
           onClick={(e) => e.stopPropagation()}
+          onMouseMove={showControls}
+          onTouchStart={showControls}
         >
           <div class="flex items-center gap-2 mb-3">
             <MonitorPlay size={14} style={{ color: 'var(--accent)' }} />
@@ -172,7 +244,8 @@ export default function PlayerPage() {
             <For each={SOURCES}>
               {(source) => (
                 <button
-                  class="px-4 py-2.5 rounded-lg text-sm font-semibold transition-all glass-card"
+                  class="tv-focusable px-4 py-2.5 rounded-lg text-sm font-semibold transition-all glass-card"
+                  tabindex="0"
                   style={{
                     background: state()?.sourceId === source.id ? 'var(--accent)' : undefined,
                     color: state()?.sourceId === source.id ? 'white' : 'var(--text)',
@@ -191,8 +264,10 @@ export default function PlayerPage() {
       {/* Episode Picker — bottom panel */}
       <Show when={showEpisodes()}>
         <div
-          class="absolute bottom-0 left-0 right-0 z-[60] max-h-[60vh] overflow-y-auto p-4 bg-gradient-to-t from-black/95 via-black/90 to-transparent"
+          class="player-controls absolute bottom-0 left-0 right-0 z-[60] max-h-[60vh] overflow-y-auto p-4 bg-gradient-to-t from-black/95 via-black/90 to-transparent"
           onClick={(e) => e.stopPropagation()}
+          onMouseMove={showControls}
+          onTouchStart={showControls}
         >
           {/* Season selector */}
           <Show when={seasons().length > 0}>
@@ -206,7 +281,8 @@ export default function PlayerPage() {
                   const isActive = () => activeSeason() === season.season_number;
                   return (
                     <button
-                      class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all shrink-0"
+                      class="tv-focusable px-3 py-1.5 rounded-lg text-xs font-bold transition-all shrink-0"
+                      tabindex="0"
                       style={{
                         background: isActive() ? 'var(--accent)' : 'rgba(255,255,255,0.08)',
                         color: isActive() ? 'white' : 'var(--text)',
@@ -234,7 +310,8 @@ export default function PlayerPage() {
                 const isCurrent = ep.season_number === state()?.season && ep.episode_number === state()?.episode;
                 return (
                   <button
-                    class="flex gap-3 p-3 rounded-xl text-left transition-all glass-card"
+                    class="tv-focusable flex gap-3 p-3 rounded-xl text-left transition-all glass-card"
+                    tabindex="0"
                     style={{
                       background: isCurrent ? 'var(--accent)' : undefined,
                       color: isCurrent ? 'white' : 'var(--text)',
